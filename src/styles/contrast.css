@@ -1,0 +1,1283 @@
+/* Global Contrast Enhancement for Light/Dark Modes */
+
+/* Enhanced contrast for base elements */
+:root {
+  /* Ensure proper contrast ratios for all text */
+  --text-primary: hsl(var(--foreground));
+  --text-secondary: hsl(var(--muted-foreground));
+  --text-muted: hsl(var(--muted-foreground) / 0.7);
+  
+  /* Enhanced border colors */
+  --border-strong: hsl(var(--border));
+  --border-subtle: hsl(var(--border) / 0.5);
+  
+  /* Enhanced background colors */
+  --bg-elevated: hsl(var(--card));
+  --bg-surface: hsl(var(--background));
+  --bg-overlay: hsl(var(--popover));
+}
+
+/* Enhanced contrast for text elements */
+h1, h2, h3, h4, h5, h6 {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+
+p, span, div {
+  color: hsl(var(--foreground));
+}
+
+.text-muted {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.text-secondary {
+  color: hsl(var(--muted-foreground) / 0.8) !important;
+}
+
+/* Enhanced contrast for cards */
+.card {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow: 0 1px 3px hsl(var(--muted-foreground) / 0.1);
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px hsl(var(--muted-foreground) / 0.15);
+  border-color: hsl(var(--primary) / 0.3);
+}
+
+/* Enhanced contrast for buttons with text */
+.btn-primary {
+  background: hsl(var(--primary)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  border: 2px solid hsl(var(--primary)) !important;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px hsl(var(--primary) / 0.3);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-primary:hover {
+  background: hsl(var(--primary) / 0.9) !important;
+  border-color: hsl(var(--primary) / 0.8) !important;
+  box-shadow: 0 4px 8px hsl(var(--primary) / 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  background: hsl(var(--primary) / 0.8) !important;
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: hsl(var(--secondary)) !important;
+  color: hsl(var(--secondary-foreground)) !important;
+  border: 2px solid hsl(var(--secondary)) !important;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px hsl(var(--secondary) / 0.3);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-secondary:hover {
+  background: hsl(var(--secondary) / 0.9) !important;
+  border-color: hsl(var(--secondary) / 0.8) !important;
+  box-shadow: 0 4px 8px hsl(var(--secondary) / 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+  background: hsl(var(--secondary) / 0.8) !important;
+  transform: translateY(0);
+}
+
+.btn-outline {
+  background: transparent !important;
+  color: hsl(var(--foreground)) !important;
+  border: 2px solid hsl(var(--border)) !important;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px hsl(var(--muted-foreground) / 0.1);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-outline:hover {
+  background: hsl(var(--accent)) !important;
+  border-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+  box-shadow: 0 2px 4px hsl(var(--accent) / 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-outline:active {
+  background: hsl(var(--accent) / 0.8) !important;
+  transform: translateY(0);
+}
+
+.btn-ghost {
+  background: transparent !important;
+  color: hsl(var(--foreground)) !important;
+  border: 2px solid transparent !important;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-ghost:hover {
+  background: hsl(var(--accent) / 0.5) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+  transform: translateY(-1px);
+}
+
+.btn-ghost:active {
+  background: hsl(var(--accent) / 0.7) !important;
+  transform: translateY(0);
+}
+
+.btn-destructive {
+  background: hsl(var(--destructive)) !important;
+  color: hsl(var(--destructive-foreground)) !important;
+  border: 2px solid hsl(var(--destructive)) !important;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px hsl(var(--destructive) / 0.3);
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-destructive:hover {
+  background: hsl(var(--destructive) / 0.9) !important;
+  border-color: hsl(var(--destructive) / 0.8) !important;
+  box-shadow: 0 4px 8px hsl(var(--destructive) / 0.4);
+  transform: translateY(-1px);
+}
+
+.btn-destructive:active {
+  background: hsl(var(--destructive) / 0.8) !important;
+  transform: translateY(0);
+}
+
+/* Size variations for buttons */
+.btn-sm {
+  padding: 0.375rem 0.75rem !important;
+  font-size: 0.875rem !important;
+  border-radius: 0.375rem !important;
+}
+
+.btn-lg {
+  padding: 0.75rem 1.5rem !important;
+  font-size: 1.125rem !important;
+  border-radius: 0.625rem !important;
+}
+
+.btn-icon {
+  padding: 0.5rem !important;
+  min-width: 2.5rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Enhanced contrast for cards */
+.card {
+  background: hsl(var(--card)) !important;
+  border: 2px solid hsl(var(--border)) !important;
+  border-radius: 0.75rem !important;
+  box-shadow: 0 4px 6px -1px hsl(var(--muted-foreground) / 0.1), 0 2px 4px -2px hsl(var(--muted-foreground) / 0.1);
+  transition: all 0.2s ease-in-out;
+  padding: 1.5rem;
+}
+
+.card:hover {
+  box-shadow: 0 10px 15px -3px hsl(var(--muted-foreground) / 0.15), 0 4px 6px -4px hsl(var(--muted-foreground) / 0.15);
+  border-color: hsl(var(--primary) / 0.3);
+  transform: translateY(-2px);
+}
+
+.card-header {
+  border-bottom: 2px solid hsl(var(--border)) !important;
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
+
+.card-title {
+  color: hsl(var(--foreground)) !important;
+  font-weight: 700 !important;
+  font-size: 1.25rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.card-description {
+  color: hsl(var(--muted-foreground)) !important;
+  font-weight: 500 !important;
+  line-height: 1.6 !important;
+}
+
+.card-content {
+  color: hsl(var(--foreground)) !important;
+  font-weight: 400 !important;
+  line-height: 1.6 !important;
+}
+
+.card-footer {
+  border-top: 2px solid hsl(var(--border)) !important;
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+/* Card variations */
+.card-interactive {
+  cursor: pointer;
+  user-select: none;
+}
+
+.card-interactive:hover {
+  box-shadow: 0 20px 25px -5px hsl(var(--muted-foreground) / 0.2), 0 8px 10px -6px hsl(var(--muted-foreground) / 0.2);
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+.card-elevated {
+  box-shadow: 0 10px 15px -3px hsl(var(--muted-foreground) / 0.15), 0 4px 6px -4px hsl(var(--muted-foreground) / 0.15);
+}
+
+.card-elevated:hover {
+  box-shadow: 0 20px 25px -5px hsl(var(--muted-foreground) / 0.2), 0 8px 10px -6px hsl(var(--muted-foreground) / 0.2);
+}
+
+.card-outlined {
+  background: transparent !important;
+  border: 2px solid hsl(var(--border)) !important;
+  box-shadow: none !important;
+}
+
+.card-outlined:hover {
+  background: hsl(var(--card)) !important;
+  border-color: hsl(var(--primary) / 0.3);
+  box-shadow: 0 4px 6px -1px hsl(var(--muted-foreground) / 0.1) !important;
+}
+
+.card-featured {
+  border-color: hsl(var(--primary)) !important;
+  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.1), 0 4px 6px -1px hsl(var(--muted-foreground) / 0.1) !important;
+}
+
+.card-featured:hover {
+  box-shadow: 0 0 0 6px hsl(var(--primary) / 0.15), 0 10px 15px -3px hsl(var(--muted-foreground) / 0.15) !important;
+}
+
+/* Button groups */
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.button-group .btn-primary,
+.button-group .btn-secondary,
+.button-group .btn-outline,
+.button-group .btn-ghost,
+.button-group .btn-destructive {
+  border-radius: 0 !important;
+}
+
+.button-group .btn-primary:first-child,
+.button-group .btn-secondary:first-child,
+.button-group .btn-outline:first-child,
+.button-group .btn-ghost:first-child,
+.button-group .btn-destructive:first-child {
+  border-top-left-radius: 0.5rem !important;
+  border-bottom-left-radius: 0.5rem !important;
+}
+
+.button-group .btn-primary:last-child,
+.button-group .btn-secondary:last-child,
+.button-group .btn-outline:last-child,
+.button-group .btn-ghost:last-child,
+.button-group .btn-destructive:last-child {
+  border-top-right-radius: 0.5rem !important;
+  border-bottom-right-radius: 0.5rem !important;
+}
+
+.button-group-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.button-group-vertical .btn-primary,
+.button-group-vertical .btn-secondary,
+.button-group-vertical .btn-outline,
+.button-group-vertical .btn-ghost,
+.button-group-vertical .btn-destructive {
+  border-radius: 0 !important;
+  border-left-width: 2px !important;
+  border-right-width: 2px !important;
+}
+
+.button-group-vertical .btn-primary:first-child,
+.button-group-vertical .btn-secondary:first-child,
+.button-group-vertical .btn-outline:first-child,
+.button-group-vertical .btn-ghost:first-child,
+.button-group-vertical .btn-destructive:first-child {
+  border-top-left-radius: 0.5rem !important;
+  border-top-right-radius: 0.5rem !important;
+  border-top-width: 2px !important;
+}
+
+.button-group-vertical .btn-primary:last-child,
+.button-group-vertical .btn-secondary:last-child,
+.button-group-vertical .btn-outline:last-child,
+.button-group-vertical .btn-ghost:last-child,
+.button-group-vertical .btn-destructive:last-child {
+  border-bottom-left-radius: 0.5rem !important;
+  border-bottom-right-radius: 0.5rem !important;
+  border-bottom-width: 2px !important;
+}
+
+/* Loading states */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1rem;
+  height: 1rem;
+  margin: -0.5rem 0 0 -0.5rem;
+  border: 2px solid hsl(var(--background));
+  border-top-color: hsl(var(--foreground));
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Disabled states */
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-outline:disabled,
+.btn-ghost:disabled,
+.btn-destructive:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Dark mode specific enhancements for buttons and cards */
+@media (prefers-color-scheme: dark) {
+  .btn-primary {
+    box-shadow: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.2);
+  }
+  
+  .btn-primary:hover {
+    box-shadow: 0 8px 12px -2px hsl(0 0% 0% / 0.4), 0 4px 6px -4px hsl(0 0% 0% / 0.3);
+  }
+  
+  .card {
+    box-shadow: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.2);
+  }
+  
+  .card:hover {
+    box-shadow: 0 10px 15px -3px hsl(0 0% 0% / 0.4), 0 4px 6px -4px hsl(0 0% 0% / 0.3);
+  }
+}
+
+/* Light mode specific enhancements for buttons and cards */
+@media (prefers-color-scheme: light) {
+  .btn-primary {
+    box-shadow: 0 2px 4px -1px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.06);
+  }
+  
+  .btn-primary:hover {
+    box-shadow: 0 4px 6px -1px hsl(0 0% 0% / 0.15), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+  }
+  
+  .card {
+    box-shadow: 0 1px 3px 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.06);
+  }
+  
+  .card:hover {
+    box-shadow: 0 4px 6px -1px hsl(0 0% 0% / 0.15), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .btn-primary,
+  .btn-secondary,
+  .btn-outline,
+  .btn-ghost,
+  .btn-destructive {
+    border-width: 3px !important;
+    font-weight: 700 !important;
+  }
+  
+  .card {
+    border-width: 3px !important;
+  }
+  
+  .card-header,
+  .card-footer {
+    border-width: 3px !important;
+  }
+}
+
+/* Focus states for accessibility */
+.btn-primary:focus,
+.btn-secondary:focus,
+.btn-outline:focus,
+.btn-ghost:focus,
+.btn-destructive:focus {
+  outline: 2px solid hsl(var(--primary)) !important;
+  outline-offset: 2px !important;
+}
+
+.card:focus-within {
+  border-color: hsl(var(--primary)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2), 0 4px 6px -1px hsl(var(--muted-foreground) / 0.1) !important;
+}
+
+/* Enhanced contrast for radio buttons */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.radio-group-horizontal {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.radio-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 2px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  background: hsl(var(--card));
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  user-select: none;
+}
+
+.radio-item:hover {
+  border-color: hsl(var(--primary) / 0.5);
+  background: hsl(var(--accent));
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px hsl(var(--muted-foreground) / 0.1);
+}
+
+.radio-item.selected {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.05);
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+}
+
+.radio-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.radio-input {
+  position: relative;
+  width: 1.25rem;
+  height: 1.25rem;
+  min-width: 1.25rem;
+  appearance: none;
+  background: hsl(var(--background));
+  border: 2px solid hsl(var(--border));
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radio-input:hover:not(:disabled) {
+  border-color: hsl(var(--primary) / 0.7);
+  background: hsl(var(--accent));
+}
+
+.radio-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2);
+  border-color: hsl(var(--primary));
+}
+
+.radio-input:checked {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2);
+}
+
+.radio-input:checked::after {
+  content: '';
+  position: absolute;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: hsl(var(--primary-foreground));
+  border-radius: 50%;
+  box-shadow: 0 1px 2px hsl(0 0% 0% / 0.2);
+}
+
+.radio-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: hsl(var(--muted));
+  border-color: hsl(var(--border));
+}
+
+.radio-input:disabled:checked {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-color: hsl(var(--muted-foreground) / 0.5);
+}
+
+.radio-label {
+  color: hsl(var(--foreground));
+  font-weight: 500;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  cursor: pointer;
+  user-select: none;
+  flex: 1;
+}
+
+.radio-label:hover {
+  color: hsl(var(--foreground));
+}
+
+.radio-item.selected .radio-label {
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+
+.radio-description {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  line-height: 1.4;
+  margin-top: 0.25rem;
+}
+
+.radio-item.selected .radio-description {
+  color: hsl(var(--primary) / 0.8);
+}
+
+/* Compact radio button style */
+.radio-compact {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.radio-compact:hover {
+  background: hsl(var(--accent));
+  border-color: hsl(var(--border));
+}
+
+.radio-compact.selected {
+  background: hsl(var(--primary) / 0.1);
+  border-color: hsl(var(--primary));
+}
+
+.radio-compact .radio-input {
+  width: 1rem;
+  height: 1rem;
+  min-width: 1rem;
+  border-width: 1.5px;
+}
+
+.radio-compact .radio-input:checked::after {
+  width: 0.375rem;
+  height: 0.375rem;
+}
+
+.radio-compact .radio-label {
+  font-size: 0.8125rem;
+}
+
+/* Card-style radio buttons */
+.radio-card {
+  padding: 1rem;
+  border: 2px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  background: hsl(var(--card));
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  user-select: none;
+}
+
+.radio-card:hover {
+  border-color: hsl(var(--primary) / 0.5);
+  background: hsl(var(--accent));
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px hsl(var(--muted-foreground) / 0.1);
+}
+
+.radio-card.selected {
+  border-color: hsl(var(--primary));
+  background: hsl(var(--primary) / 0.05);
+  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.1);
+}
+
+.radio-card .radio-input {
+  width: 1.5rem;
+  height: 1.5rem;
+  min-width: 1.5rem;
+  border-width: 2.5px;
+}
+
+.radio-card .radio-input:checked::after {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+.radio-card .radio-label {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.radio-card .radio-description {
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+/* Radio button groups with enhanced contrast */
+.radio-group-enhanced {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  background: hsl(var(--card));
+  border: 2px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px hsl(var(--muted-foreground) / 0.1);
+}
+
+.radio-group-enhanced .radio-item {
+  background: hsl(var(--background));
+  border-color: hsl(var(--border));
+}
+
+.radio-group-enhanced .radio-item:hover {
+  background: hsl(var(--accent));
+  border-color: hsl(var(--primary) / 0.5);
+}
+
+.radio-group-enhanced .radio-item.selected {
+  background: hsl(var(--primary) / 0.1);
+  border-color: hsl(var(--primary));
+}
+
+/* Radio button sizes */
+.radio-sm .radio-input {
+  width: 1rem;
+  height: 1rem;
+  min-width: 1rem;
+  border-width: 1.5px;
+}
+
+.radio-sm .radio-input:checked::after {
+  width: 0.375rem;
+  height: 0.375rem;
+}
+
+.radio-sm .radio-label {
+  font-size: 0.75rem;
+}
+
+.radio-lg .radio-input {
+  width: 1.5rem;
+  height: 1.5rem;
+  min-width: 1.5rem;
+  border-width: 2.5px;
+}
+
+.radio-lg .radio-input:checked::after {
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+.radio-lg .radio-label {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Dark mode specific enhancements for radio buttons */
+@media (prefers-color-scheme: dark) {
+  .radio-input {
+    background: hsl(var(--background));
+    border-color: hsl(var(--border));
+    box-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.2);
+  }
+
+  .radio-input:hover:not(:disabled) {
+    background: hsl(var(--accent));
+    border-color: hsl(var(--primary) / 0.7);
+  }
+
+  .radio-input:checked {
+    background: hsl(var(--primary));
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2), inset 0 1px 2px hsl(0 0% 0% / 0.2);
+  }
+
+  .radio-item {
+    background: hsl(var(--card));
+    border-color: hsl(var(--border));
+    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.1);
+  }
+
+  .radio-item:hover {
+    background: hsl(var(--accent));
+    border-color: hsl(var(--primary) / 0.5);
+    box-shadow: 0 2px 4px hsl(0 0% 0% / 0.2);
+  }
+}
+
+/* Light mode specific enhancements for radio buttons */
+@media (prefers-color-scheme: light) {
+  .radio-input {
+    background: hsl(var(--background));
+    border-color: hsl(var(--border));
+    box-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.05);
+  }
+
+  .radio-input:hover:not(:disabled) {
+    background: hsl(var(--accent));
+    border-color: hsl(var(--primary) / 0.7);
+  }
+
+  .radio-input:checked {
+    background: hsl(var(--primary));
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.2), inset 0 1px 2px hsl(0 0% 0% / 0.05);
+  }
+
+  .radio-item {
+    background: hsl(var(--card));
+    border-color: hsl(var(--border));
+    box-shadow: 0 1px 2px hsl(0 0% 0% / 0.05);
+  }
+
+  .radio-item:hover {
+    background: hsl(var(--accent));
+    border-color: hsl(var(--primary) / 0.5);
+    box-shadow: 0 2px 4px hsl(0 0% 0% / 0.1);
+  }
+}
+
+/* High contrast mode support for radio buttons */
+@media (prefers-contrast: high) {
+  .radio-input {
+    border-width: 3px !important;
+    border-color: hsl(var(--foreground)) !important;
+  }
+
+  .radio-input:hover:not(:disabled) {
+    border-color: hsl(var(--primary)) !important;
+  }
+
+  .radio-input:checked {
+    border-color: hsl(var(--primary)) !important;
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.3) !important;
+  }
+
+  .radio-item {
+    border-width: 3px !important;
+    border-color: hsl(var(--foreground)) !important;
+  }
+
+  .radio-item:hover {
+    border-color: hsl(var(--primary)) !important;
+  }
+
+  .radio-item.selected {
+    border-color: hsl(var(--primary)) !important;
+  }
+
+  .radio-label {
+    font-weight: 700 !important;
+  }
+}
+
+/* Focus states for accessibility */
+.radio-input:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+.radio-item:focus-within {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Animation for radio button selection */
+@keyframes radio-select {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.radio-input:checked {
+  animation: radio-select 0.2s ease-in-out;
+}
+
+/* Radio button with icons */
+.radio-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.radio-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: hsl(var(--muted-foreground));
+  transition: color 0.2s ease-in-out;
+}
+
+.radio-item.selected .radio-icon {
+  color: hsl(var(--primary));
+}
+
+.radio-item:hover .radio-icon {
+  color: hsl(var(--foreground));
+}
+
+/* Radio button validation states */
+.radio-item.error {
+  border-color: hsl(var(--destructive));
+  background: hsl(var(--destructive) / 0.05);
+}
+
+.radio-item.error .radio-input {
+  border-color: hsl(var(--destructive));
+}
+
+.radio-item.error .radio-label {
+  color: hsl(var(--destructive));
+}
+
+.radio-item.warning {
+  border-color: hsl(var(--warning) || hsl(45 100% 50%));
+  background: hsl(var(--warning) || hsl(45 100% 50%) / 0.05);
+}
+
+.radio-item.warning .radio-input {
+  border-color: hsl(var(--warning) || hsl(45 100% 50%));
+}
+
+.radio-item.warning .radio-label {
+  color: hsl(var(--warning) || hsl(45 100% 50%));
+}
+
+.radio-item.success {
+  border-color: hsl(var(--success) || hsl(142 76% 36%));
+  background: hsl(var(--success) || hsl(142 76% 36%) / 0.05);
+}
+
+.radio-item.success .radio-input {
+  border-color: hsl(var(--success) || hsl(142 76% 36%));
+}
+
+.radio-item.success .radio-label {
+  color: hsl(var(--success) || hsl(142 76% 36%));
+}
+
+.icon-primary {
+  color: hsl(var(--primary));
+}
+
+.icon-secondary {
+  color: hsl(var(--secondary));
+}
+
+.icon-muted {
+  color: hsl(var(--muted-foreground));
+}
+
+/* Enhanced contrast for form elements */
+.input {
+  background: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.input:focus {
+  border-color: hsl(var(--primary)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+}
+
+.input::placeholder {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.textarea {
+  background: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.textarea:focus {
+  border-color: hsl(var(--primary)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+}
+
+/* Enhanced contrast for select elements */
+.select-trigger {
+  background: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.select-trigger:focus {
+  border-color: hsl(var(--primary)) !important;
+  box-shadow: 0 0 0 2px hsl(var(--primary) / 0.2);
+}
+
+/* Enhanced contrast for badges */
+.badge {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  font-weight: 500;
+}
+
+.badge-primary {
+  background: hsl(var(--primary) / 0.1) !important;
+  color: hsl(var(--primary)) !important;
+  border: 1px solid hsl(var(--primary) / 0.2) !important;
+}
+
+.badge-secondary {
+  background: hsl(var(--secondary) / 0.1) !important;
+  color: hsl(var(--secondary)) !important;
+  border: 1px solid hsl(var(--secondary) / 0.2) !important;
+}
+
+.badge-success {
+  background: hsl(var(--success) / 0.1) !important;
+  color: hsl(var(--success)) !important;
+  border: 1px solid hsl(var(--success) / 0.2) !important;
+}
+
+.badge-warning {
+  background: hsl(var(--warning) / 0.1) !important;
+  color: hsl(var(--warning)) !important;
+  border: 1px solid hsl(var(--warning) / 0.2) !important;
+}
+
+.badge-error {
+  background: hsl(var(--destructive) / 0.1) !important;
+  color: hsl(var(--destructive)) !important;
+  border: 1px solid hsl(var(--destructive) / 0.2) !important;
+}
+
+/* Enhanced contrast for tabs */
+.tabs-trigger {
+  background: transparent !important;
+  color: hsl(var(--muted-foreground)) !important;
+  border: 1px solid transparent !important;
+  font-weight: 500;
+}
+
+.tabs-trigger:hover {
+  background: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.tabs-trigger[data-state="active"] {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Enhanced contrast for progress bars */
+.progress {
+  background: hsl(var(--muted)) !important;
+}
+
+.progress-indicator {
+  background: hsl(var(--primary)) !important;
+}
+
+/* Enhanced contrast for sliders */
+.slider {
+  accent-color: hsl(var(--primary));
+}
+
+.slider-track {
+  background: hsl(var(--muted)) !important;
+}
+
+.slider-range {
+  background: hsl(var(--primary)) !important;
+}
+
+.slider-thumb {
+  background: hsl(var(--primary)) !important;
+  border: 2px solid hsl(var(--background)) !important;
+  box-shadow: 0 2px 4px hsl(var(--muted-foreground) / 0.2);
+}
+
+/* Enhanced contrast for switches */
+.switch {
+  background: hsl(var(--muted)) !important;
+}
+
+.switch:checked {
+  background: hsl(var(--primary)) !important;
+}
+
+.switch-thumb {
+  background: hsl(var(--background)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.switch:checked .switch-thumb {
+  background: hsl(var(--primary-foreground)) !important;
+}
+
+/* Enhanced contrast for dropdown menus */
+.dropdown-menu {
+  background: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow: 0 4px 12px hsl(var(--muted-foreground) / 0.15);
+}
+
+.dropdown-menu-item {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dropdown-menu-item:hover {
+  background: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+/* Enhanced contrast for dialogs */
+.dialog {
+  background: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow: 0 8px 24px hsl(var(--muted-foreground) / 0.2);
+}
+
+/* Enhanced contrast for alerts */
+.alert {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.alert-info {
+  background: hsl(var(--info) / 0.1) !important;
+  border-color: hsl(var(--info) / 0.2) !important;
+  color: hsl(var(--info)) !important;
+}
+
+.alert-success {
+  background: hsl(var(--success) / 0.1) !important;
+  border-color: hsl(var(--success) / 0.2) !important;
+  color: hsl(var(--success)) !important;
+}
+
+.alert-warning {
+  background: hsl(var(--warning) / 0.1) !important;
+  border-color: hsl(var(--warning) / 0.2) !important;
+  color: hsl(var(--warning)) !important;
+}
+
+.alert-error {
+  background: hsl(var(--destructive) / 0.1) !important;
+  border-color: hsl(var(--destructive) / 0.2) !important;
+  color: hsl(var(--destructive)) !important;
+}
+
+/* Enhanced contrast for tooltips */
+.tooltip {
+  background: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  box-shadow: 0 4px 12px hsl(var(--muted-foreground) / 0.15);
+}
+
+/* Enhanced contrast for separators */
+.separator {
+  background: hsl(var(--border)) !important;
+}
+
+/* Enhanced contrast for tables */
+.table {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.table-header {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  font-weight: 600;
+}
+
+.table-row:hover {
+  background: hsl(var(--accent)) !important;
+}
+
+.table-cell {
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Enhanced contrast for navigation */
+.nav-link {
+  color: hsl(var(--muted-foreground)) !important;
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  color: hsl(var(--foreground)) !important;
+  background: hsl(var(--accent)) !important;
+}
+
+.nav-link.active {
+  color: hsl(var(--primary)) !important;
+  background: hsl(var(--primary) / 0.1) !important;
+}
+
+/* Enhanced contrast for sidebar */
+.sidebar {
+  background: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.sidebar-item {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.sidebar-item:hover {
+  color: hsl(var(--foreground)) !important;
+  background: hsl(var(--accent)) !important;
+}
+
+.sidebar-item.active {
+  color: hsl(var(--primary)) !important;
+  background: hsl(var(--primary) / 0.1) !important;
+}
+
+/* Enhanced contrast for status indicators */
+.status-online {
+  background: hsl(var(--success)) !important;
+  color: hsl(var(--success-foreground)) !important;
+}
+
+.status-offline {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.status-busy {
+  background: hsl(var(--warning)) !important;
+  color: hsl(var(--warning-foreground)) !important;
+}
+
+.status-error {
+  background: hsl(var(--destructive)) !important;
+  color: hsl(var(--destructive-foreground)) !important;
+}
+
+/* Dark mode specific enhancements */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text-primary: hsl(var(--foreground));
+    --text-secondary: hsl(var(--muted-foreground));
+    --text-muted: hsl(var(--muted-foreground) / 0.6);
+  }
+  
+  .card {
+    box-shadow: 0 2px 8px hsl(0 0% 0% / 0.3);
+  }
+  
+  .dropdown-menu {
+    box-shadow: 0 8px 24px hsl(0 0% 0% / 0.4);
+  }
+  
+  .dialog {
+    box-shadow: 0 12px 32px hsl(0 0% 0% / 0.5);
+  }
+}
+
+/* Light mode specific enhancements */
+@media (prefers-color-scheme: light) {
+  :root {
+    --text-primary: hsl(var(--foreground));
+    --text-secondary: hsl(var(--muted-foreground));
+    --text-muted: hsl(var(--muted-foreground) / 0.7);
+  }
+  
+  .card {
+    box-shadow: 0 1px 4px hsl(0 0% 0% / 0.1);
+  }
+  
+  .dropdown-menu {
+    box-shadow: 0 4px 16px hsl(0 0% 0% / 0.15);
+  }
+  
+  .dialog {
+    box-shadow: 0 8px 24px hsl(0 0% 0% / 0.2);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .card {
+    border-width: 2px !important;
+  }
+  
+  .btn-outline {
+    border-width: 2px !important;
+  }
+  
+  .input {
+    border-width: 2px !important;
+  }
+  
+  .select-trigger {
+    border-width: 2px !important;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
