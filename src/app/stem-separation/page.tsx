@@ -584,13 +584,11 @@ export default function StemSeparationPage() {
             </CardContent>
           </Card>
 
-          {/* Stem Mixer */}
           {selectedResult && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sliders className="h-5 w-5" />
-                  Stem Mixer
                 </CardTitle>
                 <CardDescription>
                   Adjust individual stem levels and settings

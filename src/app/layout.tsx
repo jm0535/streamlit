@@ -6,7 +6,7 @@ import "../styles/audio-components.css";
 import "../styles/forms.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
-import { EnterpriseLayout } from "@/components/enterprise-layout";
+import { AppLayout } from "@/components/enterprise-layout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,24 +19,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Streamlit - Enterprise Audio Transcription Platform",
-  description: "Professional batch audio-to-MIDI transcription platform for ethnomusicological research. Built with Next.js and Web Audio API.",
-  keywords: ["Streamlit", "audio transcription", "MIDI", "ethnomusicology", "Next.js", "TypeScript", "research", "music analysis"],
+  title: "Streamlit - Audio Research Platform",
+  description: "Audio transcription and analysis platform for research. Convert audio to MIDI, analyze frequencies, and export data. All files stay on your device.",
+  keywords: ["Streamlit", "audio transcription", "MIDI", "music analysis", "research", "audio analysis"],
   authors: [{ name: "Streamlit Team" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/logo.svg",
   },
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "Streamlit - Audio Research Platform",
+    description: "Audio transcription and analysis for research",
     type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
   },
 };
 
@@ -56,9 +49,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <EnterpriseLayout>
+          <AppLayout>
             {children}
-          </EnterpriseLayout>
+          </AppLayout>
           <Toaster />
         </ThemeProvider>
       </body>

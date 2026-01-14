@@ -1,6 +1,6 @@
 'use client';
 
-import { Music2, Github, Twitter, Linkedin, Settings } from 'lucide-react';
+import { Music2, Github, HelpCircle } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
 import Link from 'next/link';
 
@@ -23,16 +23,22 @@ export function AppHeader() {
                 Streamlit
               </h1>
               <p className="text-xs text-muted-foreground font-medium">
-                Enterprise Audio Transcription
+                Audio Research Platform
               </p>
             </div>
           </div>
 
           {/* Navigation and Actions */}
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex items-center gap-2 mr-4">
+            <div className="hidden md:flex items-center gap-4 mr-4">
               <Link
-                href="/"
+                href="/dashboard"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Dashboard
+              </Link>
+              <Link
+                href="/transcription"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 Transcription
@@ -43,59 +49,27 @@ export function AppHeader() {
               >
                 Piano Roll
               </Link>
-              <a
-                href="#"
+              <Link
+                href="/help"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                Documentation
-              </a>
-              <a
-                href="#"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                API
-              </a>
-              <a
-                href="#"
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Pricing
-              </a>
+                Help
+              </Link>
             </div>
 
             <ThemeToggle />
 
             <div className="h-6 w-px bg-border hidden md:block" />
 
-            <div className="flex items-center gap-2">
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 rounded-lg hover:bg-accent transition-colors group"
-                aria-label="GitHub"
-              >
-                <Github className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-              </a>
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 rounded-lg hover:bg-accent transition-colors group"
-                aria-label="Twitter"
-              >
-                <Twitter className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-              </a>
-              <a
-                href="https://linkedin.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 rounded-lg hover:bg-accent transition-colors group hidden sm:block"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
-              </a>
-            </div>
+            <a
+              href="https://github.com/jm0535/streamlit"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-lg hover:bg-accent transition-colors group"
+              aria-label="GitHub"
+            >
+              <Github className="h-5 w-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+            </a>
           </div>
         </div>
       </div>

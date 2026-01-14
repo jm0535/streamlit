@@ -17,44 +17,23 @@ import {
 import {
   Music2,
   Mic,
-  Sliders,
   Settings,
   FileAudio,
   BarChart3,
-  Users,
-  Database,
-  Shield,
   HelpCircle,
   ChevronLeft,
   ChevronRight,
   Home,
-  Upload,
   Download,
-  PlayCircle,
   Headphones,
-  Piano,
-  Guitar,
-  Drum,
-  Volume2,
-  Activity,
-  FileText,
-  Layers,
-  Zap,
-  Globe,
-  Clock,
-  Star,
-  TrendingUp,
   Package,
-  Archive,
   FolderOpen,
   Search,
-  Bell,
-  User,
-  LogOut,
-  Sun,
-  Moon,
+  Upload,
+  PlayCircle,
+  Piano,
+  Shield,
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 interface SidebarItem {
@@ -63,8 +42,6 @@ interface SidebarItem {
   icon: React.ComponentType<{ className?: string }>;
   badge?: string | number;
   description?: string;
-  isActive?: boolean;
-  children?: SidebarItem[];
 }
 
 interface SidebarSection {
@@ -72,115 +49,68 @@ interface SidebarSection {
   items: SidebarItem[];
 }
 
+// Simplified, research-focused navigation
 const sidebarSections: SidebarSection[] = [
   {
-    title: "Main",
+    title: "Workflow",
     items: [
       {
         title: "Dashboard",
-        href: "/",
+        href: "/dashboard",
         icon: Home,
-        description: "Overview and quick actions",
+        description: "Overview and quick upload",
       },
       {
-        title: "Audio Transcription",
+        title: "Transcription",
         href: "/transcription",
         icon: Mic,
-        description: "Convert audio to MIDI",
+        description: "Analyze audio and extract notes",
       },
       {
-        title: "Professional Mixer",
+        title: "Piano Roll",
         href: "/piano-roll",
-        icon: Sliders,
-        description: "Multi-channel audio mixing",
-        badge: "NEW",
+        icon: Piano,
+        description: "View and edit musical notes",
       },
     ],
   },
   {
-    title: "Audio Processing",
+    title: "Processing",
     items: [
-      {
-        title: "Stem Separation",
-        href: "/stem-separation",
-        icon: Layers,
-        description: "Isolate individual instruments",
-      },
       {
         title: "Batch Processing",
         href: "/batch-processing",
         icon: Package,
-        description: "Process multiple files",
-        badge: "PRO",
+        description: "Process multiple files at once",
+      },
+      {
+        title: "Stem Separation",
+        href: "/stem-separation",
+        icon: Headphones,
+        description: "Isolate instruments from audio",
       },
       {
         title: "Audio Analysis",
         href: "/audio-analysis",
         icon: BarChart3,
-        description: "Detailed audio analytics",
+        description: "Detailed frequency analysis",
       },
     ],
   },
   {
-    title: "Instruments",
+    title: "Output",
     items: [
       {
-        title: "Piano & Keys",
-        href: "/instruments/piano",
-        icon: Piano,
-        description: "Piano transcription tools",
-      },
-      {
-        title: "Guitar & Strings",
-        href: "/instruments/guitar",
-        icon: Guitar,
-        description: "Guitar and string instruments",
-      },
-      {
-        title: "Drums & Percussion",
-        href: "/instruments/drums",
-        icon: Drum,
-        description: "Drum transcription and analysis",
-      },
-    ],
-  },
-  {
-    title: "Data & Export",
-    items: [
-      {
-        title: "File Manager",
-        href: "/files",
-        icon: FolderOpen,
-        description: "Manage audio files",
-      },
-      {
-        title: "Export Center",
+        title: "Export",
         href: "/export",
         icon: Download,
-        description: "Export MIDI, CSV, ZIP",
+        description: "Export to MIDI, PDF, CSV",
       },
       {
-        title: "Archive",
-        href: "/archive",
-        icon: Archive,
-        description: "Historical data and backups",
-      },
-    ],
-  },
-  {
-    title: "Research Tools",
-    items: [
-      {
-        title: "Statistics",
-        href: "/statistics",
-        icon: TrendingUp,
-        description: "Usage and performance metrics",
-      },
-      {
-        title: "Collaboration",
-        href: "/collaboration",
-        icon: Users,
-        description: "Team projects and sharing",
+        title: "Files",
+        href: "/files",
+        icon: FolderOpen,
+        description: "Manage your local files",
       },
     ],
   },
@@ -191,73 +121,29 @@ const sidebarSections: SidebarSection[] = [
         title: "Settings",
         href: "/settings",
         icon: Settings,
-        description: "Application preferences",
+        description: "App preferences",
       },
       {
-        title: "Database",
-        href: "/database",
-        icon: Database,
-        description: "Data management",
-      },
-      {
-        title: "Security",
-        href: "/security",
-        icon: Shield,
-        description: "Security and permissions",
-      },
-      {
-        title: "Help & Support",
+        title: "Help",
         href: "/help",
         icon: HelpCircle,
-        description: "Documentation and support",
+        description: "Documentation and guides",
       },
     ],
   },
 ];
 
-interface EnterpriseSidebarProps {
+interface AppSidebarProps {
   className?: string;
 }
 
-export function EnterpriseSidebar({ className }: EnterpriseSidebarProps) {
+export function AppSidebar({ className }: AppSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
 
-  const SidebarItem = ({
-    item,
-    level = 0,
-  }: {
-    item: SidebarItem;
-    level?: number;
-  }) => {
-    const isActive =
-      pathname === item.href ||
-      item.children?.some((child) => pathname === child.href);
-
-    if (level > 0) {
-      return (
-        <Link
-          href={item.href}
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent nav-link",
-            isActive
-              ? "bg-accent text-accent-foreground font-medium nav-link active"
-              : "nav-link"
-          )}
-        >
-          <item.icon className="h-4 w-4 audio-icon" />
-          <span className="truncate">{item.title}</span>
-          {item.badge && (
-            <Badge
-              variant="secondary"
-              className="ml-auto text-xs badge-secondary"
-            >
-              {item.badge}
-            </Badge>
-          )}
-        </Link>
-      );
-    }
+  const SidebarMenuItem = ({ item }: { item: SidebarItem }) => {
+    const isActive = pathname === item.href ||
+      (item.href !== '/' && pathname.startsWith(item.href));
 
     return (
       <TooltipProvider delayDuration={0}>
@@ -266,21 +152,18 @@ export function EnterpriseSidebar({ className }: EnterpriseSidebarProps) {
             <Link
               href={item.href}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all hover:bg-accent nav-link",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-all hover:bg-accent",
                 isActive
-                  ? "bg-accent text-accent-foreground font-medium nav-link active"
-                  : "nav-link"
+                  ? "bg-primary/10 text-primary font-medium border-l-2 border-primary"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <item.icon className="h-4 w-4 audio-icon" />
+              <item.icon className={cn("h-4 w-4", isActive && "text-primary")} />
               {!isCollapsed && (
                 <>
                   <span className="truncate">{item.title}</span>
                   {item.badge && (
-                    <Badge
-                      variant="secondary"
-                      className="ml-auto text-xs badge-secondary"
-                    >
+                    <Badge variant="secondary" className="ml-auto text-xs">
                       {item.badge}
                     </Badge>
                   )}
@@ -309,7 +192,7 @@ export function EnterpriseSidebar({ className }: EnterpriseSidebarProps) {
     <div
       className={cn(
         "relative flex flex-col border-r bg-background",
-        isCollapsed ? "w-16" : "w-64",
+        isCollapsed ? "w-16" : "w-60",
         className
       )}
     >
@@ -323,9 +206,9 @@ export function EnterpriseSidebar({ className }: EnterpriseSidebarProps) {
             </div>
           </div>
           {!isCollapsed && (
-            <div className="ml-2">
+            <div className="ml-1">
               <h1 className="text-lg font-bold">Streamlit</h1>
-              <p className="text-xs text-muted-foreground">Enterprise Audio</p>
+              <p className="text-[10px] text-muted-foreground">Audio Research</p>
             </div>
           )}
         </div>
@@ -347,9 +230,9 @@ export function EnterpriseSidebar({ className }: EnterpriseSidebarProps) {
       <ScrollArea className="flex-1 px-2 py-4">
         <div className="space-y-6">
           {sidebarSections.map((section, index) => (
-            <div key={section.title} className="space-y-2">
+            <div key={section.title} className="space-y-1">
               {!isCollapsed && (
-                <div className="px-3">
+                <div className="px-3 mb-2">
                   <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     {section.title}
                   </h3>
@@ -357,68 +240,62 @@ export function EnterpriseSidebar({ className }: EnterpriseSidebarProps) {
               )}
               <div className="space-y-1">
                 {section.items.map((item) => (
-                  <SidebarItem key={item.href} item={item} />
+                  <SidebarMenuItem key={item.href} item={item} />
                 ))}
               </div>
               {index < sidebarSections.length - 1 && !isCollapsed && (
-                <Separator className="my-2" />
+                <Separator className="my-4" />
               )}
             </div>
           ))}
         </div>
       </ScrollArea>
 
-      {/* Footer */}
-      <div className="border-t p-4">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
-            <AvatarImage src="/avatars/user.jpg" alt="User" />
-            <AvatarFallback>JD</AvatarFallback>
-          </Avatar>
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">John Doe</p>
-              <p className="text-xs text-muted-foreground truncate">
-                john@example.com
-              </p>
-            </div>
-          )}
-          <div className="flex items-center gap-1">
-            <ThemeToggle />
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <Bell className="h-4 w-4" />
-            </Button>
+      {/* Privacy Note */}
+      {!isCollapsed && (
+        <div className="border-t p-3">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-2">
+            <Shield className="h-3 w-3 text-green-500" />
+            <span>Files stay on your device</span>
           </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="border-t p-3">
+        <div className="flex items-center justify-between">
+          <ThemeToggle />
+          {!isCollapsed && (
+            <span className="text-xs text-muted-foreground">v1.0</span>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-interface EnterpriseLayoutProps {
+interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-export function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
+export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="flex h-screen bg-background">
-      <EnterpriseSidebar />
+      <AppSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="flex h-16 items-center gap-4 border-b bg-background px-6">
+        <header className="flex h-14 items-center gap-4 border-b bg-background px-6">
           <div className="flex-1">
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search files, settings, or help..."
-                  className="w-full pl-10 pr-4 py-2 bg-muted border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search files or help..."
+                className="w-full pl-10 pr-4 py-2 bg-muted border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+              />
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Button variant="outline" size="sm">
               <Upload className="h-4 w-4 mr-2" />
               Upload
@@ -436,3 +313,7 @@ export function EnterpriseLayout({ children }: EnterpriseLayoutProps) {
     </div>
   );
 }
+
+// Export both for backward compatibility
+export { AppLayout as EnterpriseLayout };
+export { AppSidebar as EnterpriseSidebar };

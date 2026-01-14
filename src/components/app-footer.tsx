@@ -1,209 +1,92 @@
 'use client';
 
-import { Music2, Github, Twitter, Mail, Heart } from 'lucide-react';
+import Link from 'next/link';
+import { Music2, Shield, Heart } from 'lucide-react';
 
 export function AppFooter() {
   return (
-    <footer className="mt-auto border-t bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid gap-12 md:grid-cols-2 lg:grid-cols-4">
-          {/* Brand Section */}
+    <footer className="border-t bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Brand */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-primary to-primary/60 p-2 rounded-xl">
+            <div className="flex items-center gap-2">
+              <div className="bg-gradient-to-br from-primary to-primary/60 p-2 rounded-lg">
                 <Music2 className="h-5 w-5 text-primary-foreground" />
               </div>
               <span className="text-lg font-bold">Streamlit</span>
             </div>
-
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Enterprise-grade audio transcription platform for ethnomusicological research.
-              Built with cutting-edge technology to deliver accurate, reliable results.
+            <p className="text-sm text-muted-foreground">
+              Audio research platform for transcription and analysis.
+              Built for researchers and musicians.
             </p>
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Heart className="h-4 w-4 text-red-500 fill-red-500" />
-              <span>Made for researchers</span>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-2 w-fit">
+              <Shield className="h-3 w-3 text-green-500" />
+              <span>Your files never leave your device</span>
             </div>
           </div>
 
-          {/* Product Links */}
-          <div>
-            <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">
-              Product
-            </h3>
-            <ul className="space-y-3">
+          {/* Quick Links */}
+          <div className="space-y-4">
+            <h3 className="font-medium">Quick Links</h3>
+            <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Features
-                </a>
+                <Link href="/dashboard" className="hover:text-foreground transition-colors">
+                  Dashboard
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Documentation
-                </a>
+                <Link href="/transcription" className="hover:text-foreground transition-colors">
+                  Transcription
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  API Reference
-                </a>
+                <Link href="/piano-roll" className="hover:text-foreground transition-colors">
+                  Piano Roll
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Integration Guide
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Release Notes
-                </a>
+                <Link href="/batch-processing" className="hover:text-foreground transition-colors">
+                  Batch Processing
+                </Link>
               </li>
             </ul>
           </div>
 
           {/* Resources */}
-          <div>
-            <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">
-              Resources
-            </h3>
-            <ul className="space-y-3">
+          <div className="space-y-4">
+            <h3 className="font-medium">Resources</h3>
+            <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
-                <a
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Research Papers
-                </a>
+                <Link href="/help" className="hover:text-foreground transition-colors">
+                  Documentation
+                </Link>
+              </li>
+              <li>
+                <Link href="/settings" className="hover:text-foreground transition-colors">
+                  Settings
+                </Link>
               </li>
               <li>
                 <a
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  href="https://github.com/jm0535/streamlit"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-foreground transition-colors"
                 >
-                  Case Studies
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Blog
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Community Forum
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Support Center
+                  GitHub
                 </a>
               </li>
             </ul>
           </div>
-
-          {/* Connect */}
-          <div>
-            <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider text-muted-foreground">
-              Connect
-            </h3>
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Stay updated with our latest features and research insights.
-              </p>
-
-              <div className="flex gap-3">
-                <a
-                  href="https://github.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-3 rounded-lg bg-accent hover:bg-accent/80 transition-all hover:scale-105 group"
-                  aria-label="GitHub"
-                >
-                  <Github className="h-5 w-5 text-foreground group-hover:text-primary transition-colors" />
-                </a>
-                <a
-                  href="https://twitter.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-3 rounded-lg bg-accent hover:bg-accent/80 transition-all hover:scale-105 group"
-                  aria-label="Twitter"
-                >
-                  <Twitter className="h-5 w-5 text-foreground group-hover:text-primary transition-colors" />
-                </a>
-                <a
-                  href="mailto:support@streamlit.com"
-                  className="p-3 rounded-lg bg-accent hover:bg-accent/80 transition-all hover:scale-105 group"
-                  aria-label="Email"
-                >
-                  <Mail className="h-5 w-5 text-foreground group-hover:text-primary transition-colors" />
-                </a>
-              </div>
-
-              <div className="pt-4 border-t">
-                <a
-                  href="mailto:enterprise@streamlit.com"
-                  className="text-sm font-medium text-primary hover:text-primary/80 transition-colors flex items-center gap-2"
-                >
-                  <Mail className="h-4 w-4" />
-                  Enterprise Support
-                </a>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Streamlit. All rights reserved.
-            </p>
-
-            <div className="flex items-center gap-6 text-sm">
-              <a
-                href="#"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Privacy Policy
-              </a>
-              <a
-                href="#"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Terms of Service
-              </a>
-              <a
-                href="#"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Cookie Policy
-              </a>
-            </div>
-          </div>
+        {/* Copyright */}
+        <div className="border-t mt-8 pt-6 flex flex-col md:flex-row items-center justify-between text-sm text-muted-foreground">
+          <p>© {new Date().getFullYear()} Streamlit. Open source audio research.</p>
+          <p className="flex items-center gap-1 mt-2 md:mt-0">
+            Made with <Heart className="h-3 w-3 text-red-500" /> for researchers
+          </p>
         </div>
       </div>
     </footer>
