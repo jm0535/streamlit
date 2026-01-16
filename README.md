@@ -40,7 +40,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see your application running.
+Open [http://localhost:3000](http://localhost:3000) to see your application running or access production at [Streamlit]([https://streamlit.in4metrix.dev]() "Audio Research").
 
 ## 🎹 Piano Roll Editor
 
