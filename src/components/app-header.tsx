@@ -107,9 +107,21 @@ export function AppHeader() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
+import { Badge } from './ui/badge';
+
+// ... (keep existing imports)
+
+// ... inside component ...
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.name || 'User'}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium leading-none">{user.name || 'User'}</p>
+                        {user.role === 'admin' && (
+                          <Badge variant="default" className="text-[10px] h-4 px-1">
+                            ADMIN
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-xs leading-none text-muted-foreground">
                         {user.email}
                       </p>

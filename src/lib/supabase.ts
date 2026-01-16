@@ -18,6 +18,7 @@ export interface AuthUser {
   email: string
   name?: string
   avatar_url?: string
+  role?: string
   created_at: string
 }
 
@@ -64,13 +65,24 @@ export const signOut = async () => {
 
 export const getCurrentUser = async (): Promise<AuthUser | null> => {
   const { data: { user } } = await supabase.auth.getUser()
-  return user ? {
+
+  if (!user) return null
+
+  // Fetch role from profiles
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  return {
     id: user.id,
     email: user.email!,
     name: user.user_metadata?.full_name,
     avatar_url: user.user_metadata?.avatar_url,
+    role: profile?.role || 'user',
     created_at: user.created_at,
-  } : null
+  }
 }
 
 export const updateUserProfile = async (updates: Partial<UserProfile>) => {
