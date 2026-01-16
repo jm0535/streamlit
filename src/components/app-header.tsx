@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useRouter } from 'next/navigation';
 
@@ -52,9 +53,14 @@ export function AppHeader() {
             </div>
 
             <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">
-                Streamlit
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/60 bg-clip-text text-transparent">
+                  Streamlit
+                </h1>
+                <Badge variant="secondary" className="text-[10px] h-4 px-1 text-muted-foreground">
+                  BETA
+                </Badge>
+              </div>
               <p className="text-xs text-muted-foreground font-medium">
                 Audio Research Platform
               </p>
@@ -107,11 +113,6 @@ export function AppHeader() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
-import { Badge } from './ui/badge';
-
-// ... (keep existing imports)
-
-// ... inside component ...
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <div className="flex items-center gap-2">

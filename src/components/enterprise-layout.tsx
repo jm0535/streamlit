@@ -86,7 +86,14 @@ function AuthButtons() {
         <DropdownMenuContent className="w-56" align="end" forceMount>
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium leading-none">{user.name || 'User'}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium leading-none">{user.name || 'User'}</p>
+                {user.role === 'admin' && (
+                  <Badge variant="default" className="text-[10px] h-4 px-1">
+                    ADMIN
+                  </Badge>
+                )}
+              </div>
               <p className="text-xs leading-none text-muted-foreground">
                 {user.email}
               </p>
@@ -294,7 +301,12 @@ export function AppSidebar({ className }: AppSidebarProps) {
           </div>
           {!isCollapsed && (
             <div className="ml-1">
-              <h1 className="text-lg font-bold">Streamlit</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold">Streamlit</h1>
+                <Badge variant="secondary" className="text-[10px] h-4 px-1 text-muted-foreground">
+                  BETA
+                </Badge>
+              </div>
               <p className="text-[10px] text-muted-foreground">Audio Research</p>
             </div>
           )}
@@ -376,7 +388,10 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="relative max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
-                type="text"
+                type="search"
+                name="global-search"
+                id="global-search"
+                aria-label="Search files"
                 placeholder="Search files or help..."
                 className="w-full pl-10 pr-4 py-2 bg-muted border-0 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
               />
