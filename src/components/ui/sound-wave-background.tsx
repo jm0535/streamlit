@@ -21,12 +21,13 @@ export function SoundWaveBackground({ className }: SoundWaveProps) {
     let width = 0;
     let height = 0;
 
-    // Wave configuration
+    // Wave configuration - original pattern spread across page
     const waves = [
-      { color: "rgba(236, 72, 153, 0.5)", speed: 0.02, amplitude: 100, frequency: 0.005, yOffset: 0 },   // Pink
-      { color: "rgba(168, 85, 247, 0.5)", speed: 0.03, amplitude: 80, frequency: 0.008, yOffset: 50 },    // Purple
-      { color: "rgba(59, 130, 246, 0.5)", speed: 0.015, amplitude: 120, frequency: 0.004, yOffset: -50 }, // Blue
-      { color: "rgba(14, 165, 233, 0.3)", speed: 0.04, amplitude: 60, frequency: 0.01, yOffset: 100 },    // Sky
+      { color: "rgba(236, 72, 153, 0.5)", speed: 0.02, amplitude: 100, frequency: 0.005, yOffset: -200 },   // Pink
+      { color: "rgba(168, 85, 247, 0.5)", speed: 0.03, amplitude: 80, frequency: 0.008, yOffset: -100 },    // Purple
+      { color: "rgba(59, 130, 246, 0.5)", speed: 0.015, amplitude: 120, frequency: 0.004, yOffset: 0 },     // Blue
+      { color: "rgba(14, 165, 233, 0.3)", speed: 0.04, amplitude: 60, frequency: 0.01, yOffset: 100 },      // Sky
+      { color: "rgba(139, 92, 246, 0.4)", speed: 0.025, amplitude: 90, frequency: 0.006, yOffset: 200 },    // Violet
     ];
 
     const resize = () => {
@@ -39,35 +40,44 @@ export function SoundWaveBackground({ className }: SoundWaveProps) {
     const draw = (time: number) => {
       ctx.clearRect(0, 0, width, height);
 
-      // Tech grid background
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+      // Fading tech grid background - fades from center
       ctx.lineWidth = 1;
       const gridSize = 40;
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
 
-      // Draw grid
       for (let x = 0; x < width; x += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-      for (let y = 0; y < height; y += gridSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
+        for (let y = 0; y < height; y += gridSize) {
+          const distX = Math.abs(x - centerX);
+          const distY = Math.abs(y - centerY);
+          const dist = Math.sqrt(distX * distX + distY * distY);
+          const alpha = Math.max(0, 0.03 * (1 - dist / maxDist));
+
+          if (alpha > 0.003) {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x, Math.min(y + gridSize, height));
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(Math.min(x + gridSize, width), y);
+            ctx.stroke();
+          }
+        }
       }
 
       // Draw waves
-      const centerY = height / 2;
+      const centerWaveY = height / 2;
 
       waves.forEach((wave) => {
         ctx.beginPath();
-        ctx.moveTo(0, centerY);
+        ctx.moveTo(0, centerWaveY + wave.yOffset);
 
         for (let x = 0; x < width; x++) {
           const y = Math.sin(x * wave.frequency + time * wave.speed) * wave.amplitude * Math.sin(time * 0.05) + (Math.cos(x * 0.002) * 50);
-          ctx.lineTo(x, centerY + y + wave.yOffset);
+          ctx.lineTo(x, centerWaveY + y + wave.yOffset);
         }
 
         ctx.strokeStyle = wave.color;

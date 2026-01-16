@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { PremiumBackground } from '@/components/ui/premium-background';
+import { SoundWaveBackground } from '@/components/ui/sound-wave-background';
 import {
   Music2,
   Mic,
@@ -65,7 +65,7 @@ export default function LandingPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-black text-white">
-      <PremiumBackground />
+      <SoundWaveBackground className="text-primary/20" />
 
       {/* Navigation */}
       <nav className="relative z-20 flex items-center justify-between px-6 lg:px-12 py-6">
@@ -79,6 +79,7 @@ export default function LandingPage() {
           <span className="text-xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
             Streamlit
           </span>
+          <span className="text-xs text-white/40 hidden sm:inline">by In4Metrix</span>
         </div>
 
         <div className="hidden md:flex items-center gap-8 text-sm text-white/70">
@@ -102,8 +103,8 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative z-10 px-6 lg:px-12 pt-20 pb-32">
+      {/* Hero Section - Full viewport centered */}
+      <section className="relative z-10 px-6 lg:px-12 h-[100vh] -mt-[88px] pt-[88px] flex items-center justify-center">
         <div className="max-w-6xl mx-auto text-center">
           <div className={`transition-all duration-1000 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
             <Badge className="mb-6 px-4 py-2 bg-white/10 border-white/20 text-white/90 backdrop-blur-sm">
@@ -186,6 +187,72 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* How it Works */}
+      <section id="how-it-works" className="relative z-10 px-6 lg:px-12 py-24">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-white/10 border-white/20 text-white/90">How it Works</Badge>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Simple 3-Step Process
+            </h2>
+            <p className="text-xl text-white/50 max-w-2xl mx-auto">
+              From upload to export in minutes
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center p-8 rounded-2xl bg-white/5 border border-white/10">
+              <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">1</div>
+              <h3 className="text-xl font-semibold mb-2">Upload</h3>
+              <p className="text-white/60">Drag and drop your audio files. Supports MP3, WAV, FLAC, and more.</p>
+            </div>
+            <div className="text-center p-8 rounded-2xl bg-white/5 border border-white/10">
+              <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">2</div>
+              <h3 className="text-xl font-semibold mb-2">Process</h3>
+              <p className="text-white/60">AI separates stems, transcribes notes, or analyzes your audio locally.</p>
+            </div>
+            <div className="text-center p-8 rounded-2xl bg-white/5 border border-white/10">
+              <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">3</div>
+              <h3 className="text-xl font-semibold mb-2">Export</h3>
+              <p className="text-white/60">Download stems, MIDI files, PDFs, or sheet music in any format.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section id="pricing" className="relative z-10 px-6 lg:px-12 py-24 bg-gradient-to-b from-transparent to-black/50">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-amber-500/20 border-amber-500/30 text-amber-300">🚀 Beta</Badge>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Free During Beta
+            </h2>
+            <p className="text-xl text-white/50 max-w-2xl mx-auto">
+              Enjoy full access to all features while we&apos;re in beta
+            </p>
+          </div>
+
+          <div className="p-8 rounded-2xl bg-white/5 border border-white/10 text-center">
+            <div className="text-6xl font-bold mb-2 bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent">$0</div>
+            <p className="text-white/60 mb-6">during beta</p>
+            <ul className="text-left max-w-md mx-auto space-y-3 mb-8">
+              <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-emerald-400" /> Unlimited file processing</li>
+              <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-emerald-400" /> All AI features included</li>
+              <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-emerald-400" /> Export in any format</li>
+              <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-emerald-400" /> 100% local processing</li>
+              <li className="flex items-center gap-3"><CheckCircle className="h-5 w-5 text-emerald-400" /> No account required</li>
+            </ul>
+            <Link href="/auth/signup">
+              <Button size="lg" className="px-8 py-6 text-lg bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90 border-0">
+                Get Started Free
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* Privacy Section */}
       <section className="relative z-10 px-6 lg:px-12 py-24">
         <div className="max-w-4xl mx-auto text-center">
@@ -242,12 +309,11 @@ export default function LandingPage() {
             <span className="font-semibold">Streamlit</span>
           </div>
           <div className="text-sm text-white/40">
-            © 2026 Streamlit. Built with ❤️ using Next.js and Demucs AI.
+            © 2026 <a href="https://www.in4metrix.dev" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">In4Metrix</a>. Built with Next.js and Demucs AI.
           </div>
           <div className="flex items-center gap-6 text-sm text-white/50">
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
-            <a href="#" className="hover:text-white transition-colors">Contact</a>
+            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
           </div>
         </div>
       </footer>

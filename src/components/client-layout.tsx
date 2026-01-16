@@ -5,9 +5,14 @@ import { AppLayout } from '@/components/enterprise-layout';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAuthPage = pathname?.startsWith('/auth');
 
-  if (isAuthPage) {
+  // Pages that should render without the app sidebar/layout
+  const isFullScreenPage = pathname?.startsWith('/auth') ||
+                           pathname === '/home' ||
+                           pathname === '/privacy' ||
+                           pathname === '/terms';
+
+  if (isFullScreenPage) {
     return <>{children}</>;
   }
 
