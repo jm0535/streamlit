@@ -1,6 +1,6 @@
 # 🎵 Streamlit - **Audio Research Platform**
 
-A professional-grade audio transcription and mixing platform built for musicological research, featuring real-time audio processing, stem separation, and a complete mixing console powered by Web Audio API.
+A professional-grade audio transcription and analysis platform built for musicological research, featuring real-time audio processing, stem separation, and a complete mixing console powered by Web Audio API.
 
 ## ✨ Features
 
