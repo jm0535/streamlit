@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   keywords: ["Streamlit", "audio transcription", "MIDI", "music analysis", "research", "audio analysis"],
   authors: [{ name: "Streamlit Team" }],
   icons: {
-    icon: "/logo.svg",
+    icon: "/favicon.png",
   },
   openGraph: {
     title: "Streamlit - Audio Research Platform",
