@@ -135,10 +135,6 @@ export default function Dashboard() {
             Upload audio files and start your research workflow
           </p>
         </div>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
-          <Shield className="h-4 w-4 text-green-500" />
-          <span>Files stay on your device</span>
-        </div>
       </div>
 
       {/* Quick Upload */}
@@ -202,9 +198,10 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      {/* Main Content Grid - Equal columns */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Quick Actions */}
-        <div className="md:col-span-2 space-y-4">
+        <div className="lg:col-span-2 space-y-4">
           <h2 className="text-lg font-semibold">Tools</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             {quickActions.map((action) => (

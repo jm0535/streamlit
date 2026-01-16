@@ -31,6 +31,7 @@ import {
   Headphones,
   Save,
   VolumeX,
+  Trash2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -58,7 +59,7 @@ import {
 import { AudioFileUpload } from "@/components/audio-file-upload";
 import { AudioVisualizer } from "@/components/audio-visualizer";
 import StemSeparationViewer from "@/components/StemSeparationViewer";
-import { createStemBuffer, audioBufferToWav } from "@/lib/audio-analysis";
+import { separateAudioWithDemucs, audioBufferToWavBlob, checkBrowserSupport, SeparationProgress } from "@/lib/demucs-service";
 import { useRouter } from "next/navigation";
 
 interface StemTrack {
@@ -85,11 +86,37 @@ interface SeparationResult {
   processingTime: number;
   overallConfidence: number;
   detectedInstruments: string[];
+  timestamp?: number;
 }
+
+import { loadStemResults, saveStemResults, clearStemResults } from "@/lib/stem-store";
+
+// Helper to recreate proper icon component
+const getIconForInstrument = (inst: string) => {
+  switch(inst.toLowerCase()) {
+    case 'bass': return Music;
+    case 'drums': return Drum;
+    case 'guitar': return Guitar;
+    case 'vocals': return Mic;
+    case 'piano': return Piano;
+    default: return Waves;
+  }
+};
+
+// Helper to decode blob
+const blobToAudioBuffer = async (blob: Blob): Promise<AudioBuffer> => {
+  const arrayBuffer = await blob.arrayBuffer();
+  // Use a temporary context for decoding
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const buffer = await audioContext.decodeAudioData(arrayBuffer);
+  audioContext.close(); // Clean up
+  return buffer;
+};
 
 export default function StemSeparationPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<SeparationResult[]>([]);
@@ -100,6 +127,44 @@ export default function StemSeparationPage() {
   const [currentPlayingStem, setCurrentPlayingStem] = useState<string | null>(
     null
   );
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  // Load persisted results on mount
+  useEffect(() => {
+    const restore = async () => {
+      try {
+        const persisted = await loadStemResults();
+        if (persisted && persisted.length > 0) {
+           const hydrated = await Promise.all(persisted.map(async (res) => {
+             const stems = await Promise.all(res.stems.map(async (st) => {
+                const audioBuffer = await blobToAudioBuffer(st.blob);
+                return {
+                  ...st,
+                  icon: getIconForInstrument(st.instrument),
+                  audioBuffer
+                };
+             }));
+             return { ...res, stems };
+           }));
+           setResults(hydrated as any); // Cast slightly flexible due to complex types
+           if (hydrated.length > 0) setSelectedResult(hydrated[0] as any);
+           toast({ title: 'Restored previous session', description: `${hydrated.length} result(s) loaded.` });
+        }
+      } catch (e) {
+        console.error('Failed to restore', e);
+      }
+    };
+    restore();
+  }, [toast]);
 
   const { sharedAudioFiles, activeFiles, addFiles } = useFileStore();
 
@@ -228,10 +293,23 @@ export default function StemSeparationPage() {
     },
   ];
 
+  const handleClearResults = useCallback(async () => {
+    if (confirm("Are you sure? This will delete all saved stems.")) {
+      await clearStemResults();
+      setResults([]);
+      setSelectedResult(null);
+      toast({
+        title: "Results cleared",
+        description: "All separation history has been deleted.",
+      });
+    }
+  }, [toast]);
+
   const handleFileUpload = useCallback(
     (files: File[]) => {
       setUploadedFiles(files);
-      setResults([]);
+      // Don't clear previous results to support persistence
+      // setResults([]);
       setSelectedResult(null);
       toast({
         title: "Files uploaded",
@@ -251,6 +329,17 @@ export default function StemSeparationPage() {
       return;
     }
 
+    // Check browser support for ML separation
+    const support = checkBrowserSupport();
+    if (!support.supported) {
+      toast({
+        title: "Browser not supported",
+        description: support.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
@@ -259,67 +348,128 @@ export default function StemSeparationPage() {
       const audioContext = new AudioContext();
 
       for (const file of uploadedFiles) {
-        // Decode origin
+        const startTime = performance.now();
+
+        // Decode original audio
         const arrayBuffer = await file.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
 
-        // Filter stems
-        const processedStems: StemTrack[] = [];
+        toast({
+          title: "ML Processing Started",
+          description: "Running Demucs AI separation. This may take 30-60 seconds...",
+          duration: 5000,
+        });
 
-        // Only process enabled stems
-        for (const stemTemplate of defaultStems) {
-            // Check if this stem type is enabled in settings
-            // Simple mapping: 'bass' -> enableBass
-            const settingKey = `enable${stemTemplate.id.charAt(0).toUpperCase() + stemTemplate.id.slice(1)}`;
-            const isEnabled = (separationSettings as any)[settingKey] !== false; // default true
+        // Run ML-based stem separation with Demucs
+        const mlStems = await separateAudioWithDemucs(audioBuffer, (progress: SeparationProgress) => {
+          console.log(`[Demucs] ${progress.stage}: ${progress.percent}% - ${progress.message}`);
+        });
 
-            if (isEnabled) {
-                // Creates a filtered version of the buffer
-                const stemBuffer = await createStemBuffer(audioBuffer, stemTemplate.instrument as any);
-                const stemBlob = audioBufferToWav(stemBuffer);
+        const processingTime = (performance.now() - startTime) / 1000;
 
-                processedStems.push({
-                    ...stemTemplate,
-                    audioBuffer: stemBuffer,
-                    blob: stemBlob,
-                    confidence: 0.85 + Math.random() * 0.1,
-                    isProcessing: false
-                });
-            }
-        }
+        // Convert ML results to StemTrack format
+        // Note: Demucs 4-stem model outputs: drums, bass, vocals, other
+        // "Other" contains guitars, keyboards, synths, strings, etc.
+        const processedStems: StemTrack[] = [
+          {
+            id: "drums",
+            name: "Drums",
+            instrument: "drums",
+            icon: Drum,
+            color: "#f97316",
+            muted: false,
+            solo: false,
+            volume: 0.8,
+            frequencyRange: [20, 20000],
+            audioBuffer: mlStems.drums,
+            blob: audioBufferToWavBlob(mlStems.drums),
+            isProcessing: false,
+            confidence: 0.95,
+          },
+          {
+            id: "bass",
+            name: "Bass",
+            instrument: "bass",
+            icon: Music,
+            color: "#3b82f6",
+            muted: false,
+            solo: false,
+            volume: 0.8,
+            frequencyRange: [20, 20000],
+            audioBuffer: mlStems.bass,
+            blob: audioBufferToWavBlob(mlStems.bass),
+            isProcessing: false,
+            confidence: 0.95,
+          },
+          {
+            id: "vocals",
+            name: "Vocals",
+            instrument: "vocals",
+            icon: Mic,
+            color: "#22c55e",
+            muted: false,
+            solo: false,
+            volume: 0.8,
+            frequencyRange: [20, 20000],
+            audioBuffer: mlStems.vocals,
+            blob: audioBufferToWavBlob(mlStems.vocals),
+            isProcessing: false,
+            confidence: 0.95,
+          },
+          {
+            id: "other",
+            name: "Melody (Guitar, Keys, Synths)",
+            instrument: "other",
+            icon: Guitar,
+            color: "#eab308",
+            muted: false,
+            solo: false,
+            volume: 0.8,
+            frequencyRange: [20, 20000],
+            audioBuffer: mlStems.other,
+            blob: audioBufferToWavBlob(mlStems.other),
+            isProcessing: false,
+            confidence: 0.95,
+          },
+        ];
 
         const result: SeparationResult = {
           id: Math.random().toString(36).substr(2, 9),
           fileName: file.name,
           originalDuration: audioBuffer.duration,
           stems: processedStems,
-          processingTime:  audioBuffer.duration * 0.1, // Mock processing time
-          overallConfidence: 0.92,
-          detectedInstruments: processedStems.map(s => s.name),
+          processingTime: processingTime,
+          overallConfidence: 0.95,
+          detectedInstruments: ["Drums", "Bass", "Vocals", "Melody"],
+          timestamp: Date.now(),
         };
 
         newResults.push(result);
       }
 
       await audioContext.close();
-      setResults(newResults);
+      setResults(prev => {
+         const updated = [...prev, ...newResults];
+         saveStemResults(updated);
+         return updated;
+      });
       setSelectedResult(newResults[0]);
 
       toast({
-        title: "Stem separation complete",
-        description: `Successfully separated ${newResults.length} file(s) into stems`,
+        title: "ML Stem Separation Complete",
+        description: `Successfully separated ${newResults.length} file(s) using Demucs AI`,
       });
     } catch (error) {
       console.error(error);
       toast({
         title: "Separation failed",
-        description: "An error occurred during processing",
+        description: error instanceof Error ? error.message : "An error occurred during ML processing",
         variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
     }
-  }, [uploadedFiles, separationSettings, toast]);
+  }, [uploadedFiles, toast]);
 
   const handleAnalyzeStem = useCallback(async (stem: StemTrack, fileName: string) => {
     if (!stem.blob) return;
@@ -439,16 +589,37 @@ export default function StemSeparationPage() {
   const playStem = useCallback((stem: StemTrack) => {
     if (!stem.blob) return;
 
-    // Stop any existing audio if possible (basic implementation)
-    const audio = new Audio(URL.createObjectURL(stem.blob));
-    audio.play();
+    // Toggle Play/Pause if same stem
+    if (currentPlayingStem === stem.id) {
+       if (audioRef.current) {
+         audioRef.current.pause();
+         audioRef.current.currentTime = 0; // Reset
+         audioRef.current = null;
+       }
+       setCurrentPlayingStem(null);
+       return;
+    }
 
-    toast({
-      title: "Playing Stem",
-      description: `Playing ${stem.name} preview`,
-      duration: 2000
+    // Stop previous stem if playing
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    const audio = new Audio(URL.createObjectURL(stem.blob));
+    audioRef.current = audio;
+
+    audio.onended = () => {
+        setCurrentPlayingStem(null);
+        audioRef.current = null;
+    };
+
+    audio.play().catch((e) => {
+        console.error("Playback failed", e);
+        toast({ title: "Playback Error", description: "Converted audio format not supported", variant: "destructive" });
     });
-  }, [toast]);
+    setCurrentPlayingStem(stem.id);
+  }, [currentPlayingStem, toast]);
 
   return (
     <div className="flex-1 space-y-6 p-6">
@@ -628,14 +799,21 @@ export default function StemSeparationPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Results List */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileAudio className="h-5 w-5" />
-                Separation Results
-              </CardTitle>
-              <CardDescription>
-                {results.length} file(s) processed
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="space-y-1">
+                <CardTitle className="flex items-center gap-2">
+                    <FileAudio className="h-5 w-5" />
+                    Separation Results
+                </CardTitle>
+                <CardDescription>
+                    {results.length} file(s) processed
+                </CardDescription>
+              </div>
+              {results.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={handleClearResults} title="Clear All History">
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               {results.length === 0 ? (
@@ -756,9 +934,13 @@ export default function StemSeparationPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => playStem(stem)}
-                              title="Preview Stem"
+                              title={currentPlayingStem === stem.id ? "Pause" : "Preview Stem"}
                             >
-                              <Play className="h-4 w-4" />
+                              {currentPlayingStem === stem.id ? (
+                                <Pause className="h-4 w-4" />
+                              ) : (
+                                <Play className="h-4 w-4" />
+                              )}
                             </Button>
                             <Button
                               variant="outline"

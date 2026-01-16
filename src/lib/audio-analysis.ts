@@ -489,74 +489,9 @@ function writeFloat32(output: DataView, offset: number, input: Float32Array) {
 }
 
 /**
- * Filter AudioBuffer to create stems
+ * @deprecated EQ-based stem creation has been replaced by ML-based Demucs separation.
+ * Use separateAudioWithDemucs from @/lib/demucs-service instead.
  */
-export async function createStemBuffer(
-  original: AudioBuffer,
-  type: 'bass' | 'drums' | 'vocals' | 'other' | 'piano' | 'guitar'
-): Promise<AudioBuffer> {
-  const offlineCtx = new OfflineAudioContext(
-    original.numberOfChannels,
-    original.length,
-    original.sampleRate
-  );
-
-  const source = offlineCtx.createBufferSource();
-  source.buffer = original;
-
-  // Apply specific filters based on stem type (Simulation)
-  let node: AudioNode = source;
-
-  if (type === 'bass') {
-    const filter = offlineCtx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 250;
-    node.connect(filter);
-    node = filter;
-  } else if (type === 'drums') {
-    // Boost low end and highs for kick/snare/hihat
-    const lowShelf = offlineCtx.createBiquadFilter();
-    lowShelf.type = 'lowshelf';
-    lowShelf.frequency.value = 150;
-    lowShelf.gain.value = 5;
-
-    const highShelf = offlineCtx.createBiquadFilter();
-    highShelf.type = 'highshelf';
-    highShelf.frequency.value = 5000;
-    highShelf.gain.value = 5;
-
-    node.connect(lowShelf);
-    lowShelf.connect(highShelf);
-    node = highShelf;
-  } else if (type === 'vocals') {
-    const highPass = offlineCtx.createBiquadFilter();
-    highPass.type = 'highpass';
-    highPass.frequency.value = 300;
-
-    const lowPass = offlineCtx.createBiquadFilter();
-    lowPass.type = 'lowpass';
-    lowPass.frequency.value = 4000;
-
-    node.connect(highPass);
-    highPass.connect(lowPass);
-    node = lowPass;
-  } else if (type === 'other' || type === 'piano' || type === 'guitar') {
-    // Just a placeholder filter to make it sound different
-    const bandPass = offlineCtx.createBiquadFilter();
-    bandPass.type = 'peaking';
-    bandPass.frequency.value = type === 'piano' ? 1000 : 2000;
-    bandPass.Q.value = 1;
-    bandPass.gain.value = 6;
-
-    node.connect(bandPass);
-    node = bandPass;
-  }
-
-  node.connect(offlineCtx.destination);
-  source.start();
-
-  return await offlineCtx.startRendering();
-}
 
 /**
  * Format file size bytes to human readable string

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { playNotes as playNotesWithTone, playNote as playNoteWithTone, stopPlayback, initializeAudio } from '@/lib/audio-playback';
 import dynamic from 'next/dynamic';
+import { exportVisualToPDF } from '@/lib/visual-export';
 
 const ScoreView = dynamic(() => import('@/components/score-view').then(mod => mod.ScoreView), {
   loading: () => <div className="flex items-center justify-center h-48 bg-gray-50 text-gray-400">Loading Notation Engine...</div>,
@@ -48,6 +49,7 @@ interface NotesEditorProps {
   isReadOnly?: boolean;
   onExportMIDI?: () => void;
   onExportPDF?: () => void;
+  fileName?: string;
 }
 
 // Note colors based on pitch class
@@ -74,6 +76,7 @@ export function NotesEditor({
   isReadOnly = false,
   onExportMIDI,
   onExportPDF,
+  fileName,
 }: NotesEditorProps) {
   const [notes, setNotes] = useState<Note[]>(initialNotes);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -401,6 +404,13 @@ export function NotesEditor({
             />
           </div>
 
+          {fileName && (
+            <Badge variant="secondary" className="text-xs gap-1 border-primary/20 bg-primary/10">
+              <Music className="h-3 w-3" />
+              {fileName}
+            </Badge>
+          )}
+
           <Badge variant="outline" className="text-xs">
             {notes.length} notes
           </Badge>
@@ -414,7 +424,17 @@ export function NotesEditor({
             </Button>
           )}
           {onExportPDF && (
-            <Button onClick={onExportPDF} variant="outline" size="sm">
+            <Button
+                onClick={() => {
+                    const targetId = viewMode === 'score' ? 'notes-score-view' : 'notes-grid-view';
+                    const title = fileName ? `${fileName}_${viewMode}` : `Composition_${viewMode}`;
+                    exportVisualToPDF(targetId, title, {
+                        orientation: viewMode === 'grid' ? 'l' : 'p'
+                    });
+                }}
+                variant="outline"
+                size="sm"
+            >
               <FileText className="h-4 w-4 mr-1" /> PDF
             </Button>
           )}
@@ -424,11 +444,11 @@ export function NotesEditor({
       {/* Piano Roll Grid */}
       {/* Main View Area */}
       {viewMode === 'score' ? (
-        <div ref={scoreContainerRef} className="flex-1 overflow-auto bg-white relative">
+        <div id="notes-score-view" ref={scoreContainerRef} className="flex-1 overflow-auto bg-white relative">
           <ScoreView notes={notes} tempo={tempo} width={scoreWidth} scale={zoom} />
         </div>
       ) : (
-      <div className="flex flex-1 overflow-hidden relative">
+      <div id="notes-grid-view" className="flex flex-1 overflow-hidden relative">
         {/* Piano Keys */}
         <div
           ref={keysRef}

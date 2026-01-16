@@ -52,6 +52,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { transcribeWithBasicPitch, isBasicPitchAvailable } from "@/lib/basic-pitch-service";
+import { loadTranscriptionResults, saveTranscriptionResults, clearTranscriptionResults } from "@/lib/transcription-store";
 
 interface TranscriptionResult {
   id: string;
@@ -130,38 +131,35 @@ export default function TranscriptionPage() {
     }
   }, [pendingFiles, clearPendingFiles, toast]);
 
-  // Load transcription results from sessionStorage on mount
+  // Load transcription results from IDB on mount
   useEffect(() => {
-    try {
-      const storedResults = sessionStorage.getItem('transcriptionResults');
-      if (storedResults) {
-        const parsed = JSON.parse(storedResults);
-        setResults(parsed);
-        if (parsed.length > 0) {
-          setSelectedResult(parsed[0]);
-          console.log('📂 Loaded transcription results from session:', parsed.length);
+    const load = async () => {
+      try {
+        const storedResults = await loadTranscriptionResults();
+        if (storedResults && storedResults.length > 0) {
+          setResults(storedResults as any);
+          if (storedResults.length > 0) setSelectedResult(storedResults[0] as any);
+          console.log('📂 Loaded transcription results from IDB:', storedResults.length);
         }
+      } catch (err) {
+        console.error('Failed to load transcription results:', err);
       }
-    } catch (err) {
-      console.error('Failed to load transcription results:', err);
-    }
+    };
+    load();
   }, []);
 
-  // Save transcription results to sessionStorage whenever they change
+  // Save transcription results to IDB whenever they change
   useEffect(() => {
     if (results.length > 0) {
-      try {
-        sessionStorage.setItem('transcriptionResults', JSON.stringify(results));
-        console.log('💾 Saved transcription results to session:', results.length);
-      } catch (err) {
-        console.error('Failed to save transcription results:', err);
-      }
+        saveTranscriptionResults(results as any);
+        console.log('💾 Saved transcription results to IDB:', results.length);
     }
   }, [results]);
 
   const handleFileUpload = useCallback((files: File[]) => {
     setUploadedFiles(files);
-    setResults([]);
+    // Don't clear previous results to persist
+    // setResults([]);
     setSelectedResult(null);
     toast({
       title: "Files uploaded",
@@ -252,7 +250,7 @@ export default function TranscriptionPage() {
         addSharedAudioFile(sharedFile);
       }
 
-      setResults(newResults);
+      setResults(prev => [...prev, ...newResults]);
       setSelectedResult(newResults[0]);
       setProcessingProgress({ percent: 100, status: 'Complete!' });
 

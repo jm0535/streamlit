@@ -1,205 +1,256 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { PremiumBackground } from '@/components/ui/premium-background';
 import {
   Music2,
   Mic,
-  Upload,
-  PlayCircle,
-  FileAudio,
-  Download,
-  Piano,
   Headphones,
-  Package,
-  ArrowRight,
-  Shield,
+  Piano,
+  FileAudio,
   Zap,
-  BarChart3,
+  Shield,
+  Globe,
+  ArrowRight,
+  Play,
+  CheckCircle,
+  Sparkles,
+  Download,
+  Cloud,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { AudioFileUpload } from '@/components/audio-file-upload';
+const features = [
+  {
+    icon: Headphones,
+    title: 'AI Stem Separation',
+    description: 'Isolate drums, bass, vocals, and melody using state-of-the-art Demucs ML model',
+    color: 'from-pink-500 to-rose-500',
+  },
+  {
+    icon: Mic,
+    title: 'Music Transcription',
+    description: 'Convert audio to MIDI with precise note detection powered by Basic Pitch AI',
+    color: 'from-blue-500 to-cyan-500',
+  },
+  {
+    icon: Piano,
+    title: 'Score Visualization',
+    description: 'View your music in traditional notation or piano roll with playback',
+    color: 'from-violet-500 to-purple-500',
+  },
+  {
+    icon: FileAudio,
+    title: 'Audio Analysis',
+    description: 'Spectral analysis, tempo detection, key signature identification and more',
+    color: 'from-emerald-500 to-teal-500',
+  },
+];
 
-export default function HomePage() {
-  const { toast } = useToast();
-  const router = useRouter();
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+const stats = [
+  { value: '4', label: 'Isolated Stems' },
+  { value: '99%', label: 'Accuracy' },
+  { value: '100%', label: 'Local Processing' },
+  { value: '∞', label: 'Files Free' },
+];
 
-  const workflow = [
-    {
-      step: 1,
-      title: 'Upload Audio',
-      description: 'Drop your audio files (MP3, WAV, FLAC)',
-      icon: Upload,
-    },
-    {
-      step: 2,
-      title: 'Separate Stems',
-      description: 'Isolate vocals, drums, bass, and other instruments',
-      icon: Headphones,
-    },
-    {
-      step: 3,
-      title: 'Analyze & Transcribe',
-      description: 'Extract notes, tempo, and musical data',
-      icon: BarChart3,
-    },
-    {
-      step: 4,
-      title: 'Export Results',
-      description: 'Download MIDI, PDF, or CSV files',
-      icon: Download,
-    },
-  ];
+export default function LandingPage() {
+  const [isLoaded, setIsLoaded] = useState(false);
 
-  const features = [
-    {
-      title: 'Transcription',
-      description: 'Convert audio to musical notes with pitch detection',
-      icon: Mic,
-      href: '/transcription',
-      color: 'bg-blue-500',
-    },
-    {
-      title: 'Notes',
-      description: 'View and edit notes in DAW-style grid',
-      icon: Piano,
-      href: '/notes',
-      color: 'bg-purple-500',
-    },
-    {
-      title: 'Batch Processing',
-      description: 'Process multiple files at once',
-      icon: Package,
-      href: '/batch-processing',
-      color: 'bg-orange-500',
-    },
-    {
-      title: 'Stem Separation',
-      description: 'Isolate individual instruments',
-      icon: Headphones,
-      href: '/stem-separation',
-      color: 'bg-green-500',
-    },
-  ];
-
-  const handleFilesChange = (files: File[]) => {
-    setUploadedFiles(files);
-    if (files.length > 0) {
-      toast({
-        title: 'Files ready',
-        description: `${files.length} file(s) selected. Click "Start Workflow" to analyze.`,
-      });
-    }
-  };
-
-  const handleStartTranscription = () => {
-    if (uploadedFiles.length > 0) {
-      // Store files in session storage for workflow
-      sessionStorage.setItem('pendingFiles', JSON.stringify(uploadedFiles.map(f => f.name)));
-      router.push('/stem-separation');
-    }
-  };
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
 
   return (
-    <div className="flex-1 p-6 space-y-8">
-      {/* Hero */}
-      <div className="text-center space-y-4 py-8">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-          Audio Research Made Simple
-        </h1>
-        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-          Transcribe audio to musical notes, analyze frequencies, and export research data.
-        </p>
-        <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-          <Shield className="h-4 w-4 text-green-500" />
-          <span>All files stay on your device - 100% private</span>
-        </div>
-      </div>
+    <div className="relative min-h-screen overflow-hidden bg-black text-white">
+      <PremiumBackground />
 
-      {/* Workflow Steps */}
-      <div className="grid md:grid-cols-4 gap-4 max-w-6xl mx-auto">
-        {workflow.map((step, index) => (
-          <div key={step.step} className="relative">
-            <Card className="text-center h-full">
-              <CardHeader className="pb-2">
-                <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit mb-2">
-                  <step.icon className="h-6 w-6 text-primary" />
-                </div>
-                <Badge variant="outline" className="w-fit mx-auto mb-2">
-                  Step {step.step}
-                </Badge>
-                <CardTitle className="text-lg">{step.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{step.description}</p>
-              </CardContent>
-            </Card>
-            {index < workflow.length - 1 && (
-              <ArrowRight className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2 h-6 w-6 text-muted-foreground z-10" />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Quick Upload */}
-      <Card className="max-w-3xl mx-auto border-2 border-dashed border-primary/30">
-        <CardHeader className="text-center">
-          <CardTitle className="flex items-center justify-center gap-2">
-            <Zap className="h-5 w-5 text-primary" />
-            Quick Start
-          </CardTitle>
-          <CardDescription>
-            Drop your audio files here to begin transcription
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <AudioFileUpload
-            files={uploadedFiles}
-            onFilesChange={handleFilesChange}
-            maxFiles={10}
-          />
-          {uploadedFiles.length > 0 && (
-            <div className="flex justify-center">
-              <Button size="lg" onClick={handleStartTranscription}>
-                <PlayCircle className="h-5 w-5 mr-2" />
-                Start Workflow
-              </Button>
+      {/* Navigation */}
+      <nav className="relative z-20 flex items-center justify-between px-6 lg:px-12 py-6">
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-pink-500 rounded-lg blur-lg opacity-50" />
+            <div className="relative bg-gradient-to-r from-violet-500 to-pink-500 p-2 rounded-lg">
+              <Music2 className="h-6 w-6 text-white" />
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Features Grid */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-center">Research Tools</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
-          {features.map((feature) => (
-            <Link key={feature.title} href={feature.href}>
-              <Card className="group hover:shadow-lg transition-all cursor-pointer h-full hover:border-primary/30">
-                <CardHeader className="pb-2">
-                  <div className={`${feature.color} p-2.5 rounded-lg w-fit text-white group-hover:scale-110 transition-transform`}>
-                    <feature.icon className="h-5 w-5" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <CardTitle className="text-base mb-1 group-hover:text-primary transition-colors">
-                    {feature.title}
-                  </CardTitle>
-                  <CardDescription className="text-sm">
-                    {feature.description}
-                  </CardDescription>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+          </div>
+          <span className="text-xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
+            Streamlit
+          </span>
         </div>
-      </div>
+
+        <div className="hidden md:flex items-center gap-8 text-sm text-white/70">
+          <a href="#features" className="hover:text-white transition-colors">Features</a>
+          <a href="#how-it-works" className="hover:text-white transition-colors">How it Works</a>
+          <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Link href="/auth/login">
+            <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10">
+              Sign In
+            </Button>
+          </Link>
+          <Link href="/auth/signup">
+            <Button className="bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90 border-0">
+              Get Started
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative z-10 px-6 lg:px-12 pt-20 pb-32">
+        <div className="max-w-6xl mx-auto text-center">
+          <div className={`transition-all duration-1000 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+            <Badge className="mb-6 px-4 py-2 bg-white/10 border-white/20 text-white/90 backdrop-blur-sm">
+              <Sparkles className="h-3 w-3 mr-2" />
+              Powered by Demucs AI
+            </Badge>
+
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold mb-6 leading-tight">
+              <span className="bg-gradient-to-r from-white via-white to-white/60 bg-clip-text text-transparent">
+                Transform Your
+              </span>
+              <br />
+              <span className="bg-gradient-to-r from-violet-400 via-pink-400 to-cyan-400 bg-clip-text text-transparent">
+                Audio Experience
+              </span>
+            </h1>
+
+            <p className="text-xl md:text-2xl text-white/60 max-w-3xl mx-auto mb-10 leading-relaxed">
+              Separate stems, transcribe music to MIDI, and analyze audio with
+              enterprise-grade AI — all running locally on your device.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+              <Link href="/auth/signup">
+                <Button size="lg" className="px-8 py-6 text-lg bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90 border-0 shadow-2xl shadow-violet-500/25">
+                  <Play className="mr-2 h-5 w-5" />
+                  Start for Free
+                </Button>
+              </Link>
+              <Link href="/dashboard">
+                <Button size="lg" variant="outline" className="px-8 py-6 text-lg border-white/20 text-white hover:bg-white/10 backdrop-blur-sm">
+                  <Globe className="mr-2 h-5 w-5" />
+                  Live Demo
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className={`grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto transition-all duration-1000 delay-300 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+            {stats.map((stat, i) => (
+              <div key={i} className="text-center">
+                <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent">
+                  {stat.value}
+                </div>
+                <div className="text-sm text-white/50 mt-1">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features" className="relative z-10 px-6 lg:px-12 py-24 bg-gradient-to-b from-transparent to-black/50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-white/10 border-white/20 text-white/90">Features</Badge>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Everything You Need
+            </h2>
+            <p className="text-xl text-white/50 max-w-2xl mx-auto">
+              Professional audio tools that run entirely in your browser
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            {features.map((feature, i) => (
+              <div
+                key={i}
+                className="group relative p-8 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl"
+              >
+                <div className={`inline-flex p-3 rounded-xl bg-gradient-to-r ${feature.color} mb-4 group-hover:scale-110 transition-transform`}>
+                  <feature.icon className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <p className="text-white/60">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Privacy Section */}
+      <section className="relative z-10 px-6 lg:px-12 py-24">
+        <div className="max-w-4xl mx-auto text-center">
+          <div className="inline-flex p-4 rounded-2xl bg-emerald-500/20 mb-6">
+            <Shield className="h-8 w-8 text-emerald-400" />
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            100% Local Processing
+          </h2>
+          <p className="text-xl text-white/50 mb-8 max-w-2xl mx-auto">
+            Your audio files never leave your device. All processing happens locally using
+            WebAssembly technology — no uploads, no cloud, no compromise.
+          </p>
+          <div className="flex flex-wrap justify-center gap-4">
+            <Badge className="px-4 py-2 bg-white/10 border-white/20">
+              <CheckCircle className="h-4 w-4 mr-2 text-emerald-400" />
+              No Server Upload
+            </Badge>
+            <Badge className="px-4 py-2 bg-white/10 border-white/20">
+              <CheckCircle className="h-4 w-4 mr-2 text-emerald-400" />
+              GDPR Compliant
+            </Badge>
+            <Badge className="px-4 py-2 bg-white/10 border-white/20">
+              <CheckCircle className="h-4 w-4 mr-2 text-emerald-400" />
+              Offline Capable
+            </Badge>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="relative z-10 px-6 lg:px-12 py-24">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            Ready to Transform Your Music?
+          </h2>
+          <p className="text-xl text-white/50 mb-10">
+            Join thousands of musicians, producers, and researchers using Streamlit.
+          </p>
+          <Link href="/auth/signup">
+            <Button size="lg" className="px-12 py-6 text-lg bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90 border-0 shadow-2xl shadow-violet-500/25">
+              Get Started Free
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="relative z-10 px-6 lg:px-12 py-12 border-t border-white/10">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Music2 className="h-5 w-5 text-violet-400" />
+            <span className="font-semibold">Streamlit</span>
+          </div>
+          <div className="text-sm text-white/40">
+            © 2026 Streamlit. Built with ❤️ using Next.js and Demucs AI.
+          </div>
+          <div className="flex items-center gap-6 text-sm text-white/50">
+            <a href="#" className="hover:text-white transition-colors">Privacy</a>
+            <a href="#" className="hover:text-white transition-colors">Terms</a>
+            <a href="#" className="hover:text-white transition-colors">Contact</a>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

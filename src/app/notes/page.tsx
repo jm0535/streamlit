@@ -334,6 +334,7 @@ export default function NotesPage() {
                 isReadOnly={false}
                 onExportMIDI={handleExportMIDI}
                 onExportPDF={handleExportPDF}
+                fileName={fileName}
               />
             </CardContent>
           </Card>
