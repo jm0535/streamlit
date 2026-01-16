@@ -1,10 +1,11 @@
-# 🎵 Streamlit - Enterprise Audio Transcription Platform
+# 🎵 Streamlit - **Audio Research Platform**
 
-A professional-grade audio transcription and mixing platform built for ethnomusicological research, featuring real-time audio processing, stem separation, and a complete mixing console powered by Web Audio API.
+A professional-grade audio transcription and mixing platform built for musicological research, featuring real-time audio processing, stem separation, and a complete mixing console powered by Web Audio API.
 
 ## ✨ Features
 
 ### 🎯 Core Audio Processing
+
 - **🎵 Real-time Audio Transcription** - Convert audio to MIDI with advanced pitch detection
 - **🎛️ Professional Audio Mixer** - Multi-channel mixing with Web Audio API
 - **🔀 Stem Separation** - Isolate individual instruments from audio files
@@ -12,12 +13,14 @@ A professional-grade audio transcription and mixing platform built for ethnomusi
 - **🎼 Musical Notation** - Generate sheet music and piano roll views
 
 ### 🎨 Professional Interface
+
 - **🎛️ Mixing Console** - Professional DAW-style interface with level meters
 - **📱 Responsive Design** - Works seamlessly on desktop and tablet
 - **🌈 Beautiful UI** - Modern design with shadcn/ui components
 - **🎯 Real-time Visualization** - Audio waveforms and frequency analysis
 
 ### 🔐 Authentication & Collaboration
+
 - **👥 Enterprise Auth** - Complete login/signup flows via Supabase
 - **🤝 Team Collaboration** - Invite members and manage roles (Viewer/Editor/Admin)
 - **📫 Email System** - Professional branded email templates with Resend SMTP
@@ -52,29 +55,34 @@ Experience the professional audio mixer by visiting `/mixer-demo`:
 ## 🏗️ Technology Stack
 
 ### 🎯 Core Framework
+
 - **⚡ Next.js 15** - React framework with App Router
 - **📘 TypeScript 5** - Type-safe development
 - **🎨 Tailwind CSS 4** - Modern utility-first styling
 
 ### 🔥 Backend & Database
+
 - **⚡ Supabase** - Open source Firebase alternative
 - **🐘 PostgreSQL** - Robust relational database
 - **🔐 Auth** - Enterprise-grade authentication
 - **📨 Resend** - Reliable SMTP email delivery
 
 ### 🎵 Audio Processing
+
 - **🎵 Web Audio API** - Low-latency audio processing
 - **🎛️ Audio Nodes** - Gain, Panner, Analyser for professional mixing
 - **📊 FFT Analysis** - Real-time frequency and time-domain analysis
 - **🎼 MIDI Processing** - Complete MIDI file generation and manipulation
 
 ### 🧩 UI Components
+
 - **🧩 shadcn/ui** - High-quality accessible components
 - **🎯 Lucide React** - Beautiful icon library
 - **🎨 Framer Motion** - Smooth animations and transitions
 - **🌈 Next Themes** - Dark/light mode support
 
 ### 📋 Data Management
+
 - **🎣 React Hook Form** - Performant forms with validation
 - **✅ Zod** - TypeScript-first schema validation
 - **🐻 Zustand** - Simple state management
@@ -106,18 +114,21 @@ src/
 ## 🎵 Audio Features
 
 ### Real-time Transcription
+
 - **Pitch Detection** - Advanced autocorrelation algorithms
 - **Note Extraction** - Intelligent note onset detection
 - **Rhythm Analysis** - Tempo and timing extraction
 - **Confidence Scoring** - Quality metrics for transcription accuracy
 
 ### Piano Roll Editor
+
 - **Note Grid** - DAW-style visual note display
 - **Effects Processing** - Reverb, delay, EQ simulation
 - **Note Editing** - Click to add, select, and delete notes
 - **Automation Ready** - Parameter automation framework
 
 ### Stem Separation
+
 - **Frequency Analysis** - Band-based instrument separation
 - **AI-ready Architecture** - Prepared for TensorFlow.js integration
 - **Instrument Detection** - Automatic instrument identification
@@ -139,6 +150,7 @@ const analyserNode = audioContext.createAnalyser();
 ```
 
 ### Mixer Integration
+
 ```typescript
 <AudioMixer
   channels={channels}
@@ -179,6 +191,7 @@ const analyserNode = audioContext.createAnalyser();
 - **Sound Design** - Audio effect and texture creation
 
 ### 🎓 Education
+
 - **Music Theory** - Visual learning tools
 - **Audio Engineering** - Hands-on mixing experience
 - **Research Methods** - Data collection and analysis
