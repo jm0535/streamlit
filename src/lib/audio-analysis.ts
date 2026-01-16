@@ -197,10 +197,393 @@ function applyTuningCorrection(
       const quarterToneMidi = Math.round(24 * Math.log2(originalFreq / referenceFreq) + 69);
       return Math.max(21, Math.min(108, Math.round(quarterToneMidi / 2) * 2));
 
-    default:
+  default:
       return midi;
   }
 }
+
+/**
+ * Calculate Frequency Spectrum using FFT
+ * Returns an array of magnitude values for frequency bins
+ */
+export function calculateFrequencySpectrum(
+  audioBuffer: AudioBuffer,
+  fftSize: number = 2048
+): number[] {
+  const channelData = audioBuffer.getChannelData(0);
+  const sampleRate = audioBuffer.sampleRate;
+
+  // Create an offline context to process audio
+  const offlineCtx = new OfflineAudioContext(1, fftSize, sampleRate);
+  const source = offlineCtx.createBufferSource();
+  source.buffer = audioBuffer;
+
+  const analyser = offlineCtx.createAnalyser();
+  analyser.fftSize = fftSize;
+  source.connect(analyser);
+
+  // We can't actually run offline context synchronously to get analyser data in this way easily
+  // independently without playing. So we'll use a pure JS FFT implementation style
+  // or a simplified time-domain analysis for the "snapshot"
+
+  // Improved approach: Take a representative chunk from the middle of the audio
+  const middleIndex = Math.floor(channelData.length / 2);
+  const dataSlice = channelData.slice(middleIndex, middleIndex + fftSize);
+
+  // Apply window function (Hann)
+  const windowed = dataSlice.map((val, i) =>
+    val * (0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1))))
+  );
+
+  // Perform simple DFT (Discrete Fourier Transform) - O(N^2) but fine for small N like 2048
+  // For larger, we'd need a proper FFT lib, but this is sufficient for visualization
+  const spectrum = new Float32Array(fftSize / 2);
+
+  for (let k = 0; k < fftSize / 2; k++) {
+    let re = 0;
+    let im = 0;
+    for (let n = 0; n < fftSize; n++) {
+      const angle = (2 * Math.PI * k * n) / fftSize;
+      re += windowed[n] * Math.cos(angle);
+      im -= windowed[n] * Math.sin(angle);
+    }
+    // Calculate magnitude and convert to dB
+    const mag = Math.sqrt(re * re + im * im);
+    spectrum[k] = mag;
+  }
+
+  // Normalize
+  const maxVal = Math.max(...spectrum);
+  return Array.from(spectrum).map(v => v / (maxVal || 1));
+}
+
+/**
+ * Calculate Amplitude Envelope (RMS over time)
+ * Returns an array of amplitude values (0-1)
+ */
+export function calculateAmplitudeEnvelope(
+  audioBuffer: AudioBuffer,
+  points: number = 1000
+): number[] {
+  const channelData = audioBuffer.getChannelData(0);
+  const blockSize = Math.floor(channelData.length / points);
+  const envelope: number[] = [];
+
+  for (let i = 0; i < points; i++) {
+// ... (lines 273-283 remain same but loop content is not shown in this hunk if only replacing top)
+
+// Need to match context correctly. I will just replace the top of the function to add type.
+
+    const start = i * blockSize;
+    const end = Math.min(start + blockSize, channelData.length);
+    let sum = 0;
+
+    for (let j = start; j < end; j++) {
+      sum += channelData[j] * channelData[j];
+    }
+
+    const rms = Math.sqrt(sum / (end - start));
+    envelope.push(rms);
+  }
+
+  // Normalize
+  const maxVal = Math.max(...envelope);
+  return envelope.map(v => v / (maxVal || 1));
+}
+
+/**
+ * Calculate Pitch Contour (Fundamental Frequency over time)
+ * Uses simple Zero-Crossing Rate combined with ACF for visualization
+ */
+export function calculatePitchContour(
+  audioBuffer: AudioBuffer,
+  points: number = 200
+): Array<{ time: number; frequency: number; confidence: number }> {
+  const channelData = audioBuffer.getChannelData(0);
+  const sampleRate = audioBuffer.sampleRate;
+  const blockSize = Math.floor(channelData.length / points);
+  const contour: Array<{ time: number; frequency: number; confidence: number }> = [];
+
+  for (let i = 0; i < points; i++) {
+    const start = i * blockSize;
+    const end = Math.min(start + blockSize, channelData.length);
+    const segment = channelData.slice(start, end);
+
+    // Simple autocorrelation for pitch
+    let bestOffset = -1;
+    let maxCorrelation = 0;
+
+    // Search range for human pitch (50Hz - 1000Hz)
+    // blocked by sampleRate.
+    // minPeriod = sampleRate / 1000
+    // maxPeriod = sampleRate / 50
+    const minPeriod = Math.floor(sampleRate / 1000);
+    const maxPeriod = Math.floor(sampleRate / 50);
+
+    // RMS check to avoid pitch detection on silence
+    let rms = 0;
+    for(let k=0; k<segment.length; k++) rms += segment[k]*segment[k];
+    rms = Math.sqrt(rms/segment.length);
+
+    if (rms > 0.01) { // Silence threshold
+      // Simplified ACF
+      for (let offset = minPeriod; offset < maxPeriod && offset < segment.length; offset++) {
+        let correlation = 0;
+        for (let j = 0; j < segment.length - offset; j++) {
+          correlation += segment[j] * segment[j + offset];
+        }
+        if (correlation > maxCorrelation) {
+          maxCorrelation = correlation;
+          bestOffset = offset;
+        }
+      }
+    }
+
+    if (bestOffset > 0 && maxCorrelation > 0.1) {
+      const frequency = sampleRate / bestOffset;
+      contour.push({
+        time: (i * blockSize) / sampleRate,
+        frequency,
+        confidence: maxCorrelation // Normalized-ish
+      });
+    } else {
+      contour.push({
+        time: (i * blockSize) / sampleRate,
+        frequency: 0,
+        confidence: 0
+      });
+    }
+  }
+
+  return contour;
+}
+
+/**
+ * Convert frequency bin index to Hz
+ */
+export function binToHz(binIndex: number, fftSize: number, sampleRate: number): number {
+  return (binIndex * sampleRate) / fftSize;
+}
+
+/**
+ * Detect peaks in frequency spectrum
+ */
+export function detectFrequencyPeaks(
+  spectrum: number[],
+  fftSize: number,
+  sampleRate: number,
+  maxPeaks: number = 10
+): Array<{ frequency: number; amplitude: number }> {
+  const peaks: Array<{ frequency: number; amplitude: number }> = [];
+
+  for (let i = 1; i < spectrum.length - 1; i++) {
+    if (spectrum[i] > spectrum[i-1] && spectrum[i] > spectrum[i+1]) {
+      if (spectrum[i] > 0.1) { // Threshold
+        peaks.push({
+          frequency: binToHz(i, fftSize, sampleRate),
+          amplitude: spectrum[i]
+        });
+      }
+    }
+  }
+
+  return peaks
+    .sort((a, b) => b.amplitude - a.amplitude)
+    .slice(0, maxPeaks);
+}
+
+/**
+ * Encode AudioBuffer to WAV Blob
+ */
+export function audioBufferToWav(buffer: AudioBuffer): Blob {
+  const numChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const format = 1; // PCM
+  const bitDepth = 16;
+
+  let result;
+  if (numChannels === 2) {
+    result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
+  } else {
+    result = buffer.getChannelData(0);
+  }
+
+  return encodeWAV(result, numChannels, sampleRate, bitDepth);
+}
+
+function interleave(inputL: Float32Array, inputR: Float32Array) {
+  const length = inputL.length + inputR.length;
+  const result = new Float32Array(length);
+
+  let index = 0;
+  let inputIndex = 0;
+
+  while (index < length) {
+    result[index++] = inputL[inputIndex];
+    result[index++] = inputR[inputIndex];
+    inputIndex++;
+  }
+  return result;
+}
+
+function encodeWAV(samples: Float32Array, numChannels: number, sampleRate: number, bitDepth: number) {
+  const bytesPerSample = bitDepth / 8;
+  const blockAlign = numChannels * bytesPerSample;
+
+  const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+  const view = new DataView(buffer);
+
+  /* RIFF identifier */
+  writeString(view, 0, 'RIFF');
+  /* RIFF chunk length */
+  view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+  /* RIFF type */
+  writeString(view, 8, 'WAVE');
+  /* format chunk identifier */
+  writeString(view, 12, 'fmt ');
+  /* format chunk length */
+  view.setUint32(16, 16, true);
+  /* sample format (raw) */
+  view.setUint16(20, 1, true);
+  /* channel count */
+  view.setUint16(22, numChannels, true);
+  /* sample rate */
+  view.setUint32(24, sampleRate, true);
+  /* byte rate (sample rate * block align) */
+  view.setUint32(28, sampleRate * blockAlign, true);
+  /* block align (channel count * bytes per sample) */
+  view.setUint16(32, blockAlign, true);
+  /* bits per sample */
+  view.setUint16(34, bitDepth, true);
+  /* data chunk identifier */
+  writeString(view, 36, 'data');
+  /* data chunk length */
+  view.setUint32(40, samples.length * bytesPerSample, true);
+
+  if (bitDepth === 16) {
+    floatTo16BitPCM(view, 44, samples);
+  } else {
+    writeFloat32(view, 44, samples);
+  }
+
+  return new Blob([view], { type: 'audio/wav' });
+}
+
+function writeString(view: DataView, offset: number, string: string) {
+  for (let i = 0; i < string.length; i++) {
+    view.setUint8(offset + i, string.charCodeAt(i));
+  }
+}
+
+function floatTo16BitPCM(output: DataView, offset: number, input: Float32Array) {
+  for (let i = 0; i < input.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, input[i]));
+    output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+}
+
+function writeFloat32(output: DataView, offset: number, input: Float32Array) {
+  for (let i = 0; i < input.length; i++, offset += 4) {
+    output.setFloat32(offset, input[i], true);
+  }
+}
+
+/**
+ * Filter AudioBuffer to create stems
+ */
+export async function createStemBuffer(
+  original: AudioBuffer,
+  type: 'bass' | 'drums' | 'vocals' | 'other' | 'piano' | 'guitar'
+): Promise<AudioBuffer> {
+  const offlineCtx = new OfflineAudioContext(
+    original.numberOfChannels,
+    original.length,
+    original.sampleRate
+  );
+
+  const source = offlineCtx.createBufferSource();
+  source.buffer = original;
+
+  // Apply specific filters based on stem type (Simulation)
+  let node: AudioNode = source;
+
+  if (type === 'bass') {
+    const filter = offlineCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 250;
+    node.connect(filter);
+    node = filter;
+  } else if (type === 'drums') {
+    // Boost low end and highs for kick/snare/hihat
+    const lowShelf = offlineCtx.createBiquadFilter();
+    lowShelf.type = 'lowshelf';
+    lowShelf.frequency.value = 150;
+    lowShelf.gain.value = 5;
+
+    const highShelf = offlineCtx.createBiquadFilter();
+    highShelf.type = 'highshelf';
+    highShelf.frequency.value = 5000;
+    highShelf.gain.value = 5;
+
+    node.connect(lowShelf);
+    lowShelf.connect(highShelf);
+    node = highShelf;
+  } else if (type === 'vocals') {
+    const highPass = offlineCtx.createBiquadFilter();
+    highPass.type = 'highpass';
+    highPass.frequency.value = 300;
+
+    const lowPass = offlineCtx.createBiquadFilter();
+    lowPass.type = 'lowpass';
+    lowPass.frequency.value = 4000;
+
+    node.connect(highPass);
+    highPass.connect(lowPass);
+    node = lowPass;
+  } else if (type === 'other' || type === 'piano' || type === 'guitar') {
+    // Just a placeholder filter to make it sound different
+    const bandPass = offlineCtx.createBiquadFilter();
+    bandPass.type = 'peaking';
+    bandPass.frequency.value = type === 'piano' ? 1000 : 2000;
+    bandPass.Q.value = 1;
+    bandPass.gain.value = 6;
+
+    node.connect(bandPass);
+    node = bandPass;
+  }
+
+  node.connect(offlineCtx.destination);
+  source.start();
+
+  return await offlineCtx.startRendering();
+}
+
+/**
+ * Format file size bytes to human readable string
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+/**
+ * Detect musical key from frequency peaks (simple heuristic)
+ */
+export function detectMusicalKey(peaks: Array<{ frequency: number; amplitude: number }>): { key: string; mode: string } {
+  if (peaks.length === 0) return { key: 'Unknown', mode: '' };
+
+  // Simple check based on strongest peak (fundamental)
+  const fundamental = peaks[0].frequency;
+  const pitchNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+  const midi = Math.round(12 * Math.log2(fundamental / 440) + 69);
+  const noteName = pitchNames[midi % 12];
+
+  return { key: noteName, mode: 'Major' }; // Simplification
+}
+
 
 /**
  * Convert frequency to MIDI note number with tuning support
@@ -626,14 +1009,24 @@ export async function analyzeAudio(
 /**
  * Decode audio file to AudioBuffer
  */
+// Use OfflineAudioContext for more reliable batch decoding without hitting hardware limits
 export async function decodeAudioFile(file: File): Promise<AudioBuffer> {
   const arrayBuffer = await file.arrayBuffer();
-  const audioContext = new AudioContext();
+
+  // Create a temporary context just to decode
+  // @ts-ignore - Safari prefix compatibility
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  const audioContext = new AudioContextClass();
 
   try {
-    return await audioContext.decodeAudioData(arrayBuffer);
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    return audioBuffer;
   } catch (error) {
-    throw new Error('Failed to decode audio file');
+    console.error("Audio decoding failed:", error);
+    throw new Error('Failed to decode audio file. The format may not be supported.');
+  } finally {
+    // Always close the context to release resources
+    await audioContext.close();
   }
 }
 

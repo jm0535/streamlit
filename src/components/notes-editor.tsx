@@ -19,7 +19,12 @@ import {
   RotateCcw,
   Volume2,
   Save,
+  Loader2,
+  Grid3X3,
+  BookOpen,
 } from 'lucide-react';
+import { playNotes as playNotesWithTone, playNote as playNoteWithTone, stopPlayback, initializeAudio } from '@/lib/audio-playback';
+import { ScoreView } from '@/components/score-view';
 
 // MIDI note number to note name
 const MIDI_NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -30,7 +35,7 @@ function midiToNoteName(midi: number): string {
   return `${noteName}${octave}`;
 }
 
-interface PianoRollProps {
+interface NotesEditorProps {
   notes: Note[];
   onNotesChange?: (notes: Note[]) => void;
   duration?: number;
@@ -42,21 +47,21 @@ interface PianoRollProps {
 
 // Note colors based on pitch class
 const NOTE_COLORS: Record<number, string> = {
-  0: 'bg-red-500',     // C
-  1: 'bg-red-400',     // C#
-  2: 'bg-orange-500',  // D
-  3: 'bg-orange-400',  // D#
-  4: 'bg-yellow-500',  // E
-  5: 'bg-green-500',   // F
-  6: 'bg-green-400',   // F#
-  7: 'bg-blue-500',    // G
-  8: 'bg-blue-400',    // G#
-  9: 'bg-indigo-500',  // A
-  10: 'bg-indigo-400', // A#
-  11: 'bg-purple-500', // B
+  0: '#ef4444',   // C - red
+  1: '#f87171',   // C#
+  2: '#f97316',   // D - orange
+  3: '#fb923c',   // D#
+  4: '#eab308',   // E - yellow
+  5: '#22c55e',   // F - green
+  6: '#4ade80',   // F#
+  7: '#3b82f6',   // G - blue
+  8: '#60a5fa',   // G#
+  9: '#6366f1',   // A - indigo
+  10: '#818cf8',  // A#
+  11: '#a855f7',  // B - purple
 };
 
-export function PianoRoll({
+export function NotesEditor({
   notes: initialNotes,
   onNotesChange,
   duration = 30,
@@ -64,7 +69,7 @@ export function PianoRoll({
   isReadOnly = false,
   onExportMIDI,
   onExportPDF,
-}: PianoRollProps) {
+}: NotesEditorProps) {
   const [notes, setNotes] = useState<Note[]>(initialNotes);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playheadPosition, setPlayheadPosition] = useState(0);
@@ -73,11 +78,16 @@ export function PianoRoll({
   const [scrollY, setScrollY] = useState(0);
   const [selectedNote, setSelectedNote] = useState<string | null>(null);
   const [volume, setVolume] = useState(0.7);
+  const [viewMode, setViewMode] = useState<'grid' | 'score'>('grid');
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const keysRef = useRef<HTMLDivElement>(null);
   const animationRef = useRef<number | null>(null);
   const playStartTimeRef = useRef<number>(0);
+  const stopFnRef = useRef<(() => void) | null>(null);
+  const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+  const [scoreWidth, setScoreWidth] = useState(1000);
+  const scoreContainerRef = useRef<HTMLDivElement>(null);
 
   // Piano roll dimensions
   const PIANO_KEY_WIDTH = 60;
@@ -92,52 +102,70 @@ export function PianoRoll({
   // Update notes when prop changes
   useEffect(() => {
     setNotes(initialNotes);
+
+    // Auto-scroll to notes
+    if (initialNotes.length > 0 && canvasRef.current) {
+      // Find range of pitches
+      const midis = initialNotes.map(n => n.midi);
+      const minMidi = Math.min(...midis);
+      const maxMidi = Math.max(...midis);
+      const avgMidi = (minMidi + maxMidi) / 2;
+
+      // Calculate Scroll Y
+      // y = (MAX_MIDI - midi) * NOTE_HEIGHT
+      const centerY = (87 - avgMidi + 21) * 16; // Approximate calculation
+      // Precise: (MAX_MIDI - avgMidi) * NOTE_HEIGHT
+      const preciseCenterY = (108 - avgMidi) * 16;
+
+      const containerHeight = 500; // Fixed height from style
+
+      // Scroll to center
+      setTimeout(() => {
+        if (canvasRef.current) {
+          canvasRef.current.scrollTop = Math.max(0, centerY - containerHeight / 2);
+        }
+      }, 100);
+    }
   }, [initialNotes]);
 
-  // Initialize audio context
+  // Initialize audio on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
     return () => {
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
+      stopPlayback();
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
     };
   }, []);
 
-  // Play a note
-  const playNote = useCallback((frequency: number, startDelay: number, noteDuration: number) => {
-    if (!audioContextRef.current) return;
+  // Update score width on resize
+  useEffect(() => {
+    if (!scoreContainerRef.current) return;
 
-    const ctx = audioContextRef.current;
-    const oscillator = ctx.createOscillator();
-    const gainNode = ctx.createGain();
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0) {
+           setScoreWidth(entry.contentRect.width - 40); // Subtract padding
+        }
+      }
+    });
 
-    oscillator.type = 'triangle';
-    oscillator.frequency.value = frequency;
+    observer.observe(scoreContainerRef.current);
+    return () => observer.disconnect();
+  }, [viewMode]);
 
-    gainNode.gain.value = 0;
-    gainNode.gain.setValueAtTime(0, ctx.currentTime + startDelay);
-    gainNode.gain.linearRampToValueAtTime(volume * 0.3, ctx.currentTime + startDelay + 0.01);
-    gainNode.gain.setValueAtTime(volume * 0.3, ctx.currentTime + startDelay + noteDuration - 0.05);
-    gainNode.gain.linearRampToValueAtTime(0, ctx.currentTime + startDelay + noteDuration);
-
-    oscillator.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    oscillator.start(ctx.currentTime + startDelay);
-    oscillator.stop(ctx.currentTime + startDelay + noteDuration);
+  // Play a single note (for click feedback) using Tone.js
+  const playNote = useCallback(async (frequency: number, startDelay: number, noteDuration: number) => {
+    // Convert frequency to MIDI
+    const midi = Math.round(12 * Math.log2(frequency / 440) + 69);
+    await playNoteWithTone(midi, noteDuration, volume);
   }, [volume]);
 
-  // Playback animation
+  // Playback animation using performance.now()
   const animate = useCallback(() => {
-    if (!audioContextRef.current || !isPlaying) return;
+    if (!isPlaying) return;
 
-    const elapsed = audioContextRef.current.currentTime - playStartTimeRef.current;
+    const elapsed = (performance.now() - playStartTimeRef.current) / 1000;
     setPlayheadPosition(elapsed);
 
     if (elapsed < duration) {
@@ -148,11 +176,14 @@ export function PianoRoll({
     }
   }, [isPlaying, duration]);
 
-  // Handle playback
-  const handlePlay = useCallback(() => {
-    if (!audioContextRef.current) return;
-
+  // Handle playback using Tone.js for realistic sounds
+  const handlePlay = useCallback(async () => {
     if (isPlaying) {
+      // Stop playback
+      if (stopFnRef.current) {
+        stopFnRef.current();
+        stopFnRef.current = null;
+      }
       setIsPlaying(false);
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -160,21 +191,55 @@ export function PianoRoll({
       return;
     }
 
-    setIsPlaying(true);
-    playStartTimeRef.current = audioContextRef.current.currentTime - playheadPosition;
+    if (notes.length === 0) return;
 
-    // Schedule all notes
-    notes.forEach(note => {
-      if (note.startTime >= playheadPosition) {
-        const startDelay = note.startTime - playheadPosition;
-        playNote(note.frequency, startDelay, note.duration);
-      }
-    });
+    setIsLoadingAudio(true);
 
-    animationRef.current = requestAnimationFrame(animate);
-  }, [isPlaying, playheadPosition, notes, playNote, animate]);
+    try {
+      // Initialize Tone.js audio context (requires user interaction)
+      await initializeAudio();
+
+      setIsPlaying(true);
+      playStartTimeRef.current = performance.now();
+
+      // Filter notes to start from current playhead position
+      const notesToPlay = notes
+        .filter(note => note.startTime >= playheadPosition)
+        .map(note => ({
+          ...note,
+          startTime: note.startTime - playheadPosition,
+        }));
+
+      // Play notes using Tone.js with piano samples
+      const stopFn = await playNotesWithTone(
+        notesToPlay,
+        { volume, instrument: 'piano' },
+        (time, playing) => {
+          if (playing) {
+            setPlayheadPosition(playheadPosition + time);
+          } else {
+            setIsPlaying(false);
+            setPlayheadPosition(0);
+          }
+        }
+      );
+
+      stopFnRef.current = stopFn;
+      animationRef.current = requestAnimationFrame(animate);
+    } catch (error) {
+      console.error('Playback error:', error);
+      setIsPlaying(false);
+    } finally {
+      setIsLoadingAudio(false);
+    }
+  }, [isPlaying, playheadPosition, notes, volume, animate]);
 
   const handleStop = useCallback(() => {
+    if (stopFnRef.current) {
+      stopFnRef.current();
+      stopFnRef.current = null;
+    }
+    stopPlayback();
     setIsPlaying(false);
     setPlayheadPosition(0);
     if (animationRef.current) {
@@ -246,7 +311,7 @@ export function PianoRoll({
   };
 
   return (
-    <div className="bg-gray-900 text-white rounded-lg overflow-hidden">
+    <div className="bg-[#1a1a1a] text-white rounded-lg overflow-hidden border border-[#333] h-[600px] flex flex-col shadow-xl">
       {/* Toolbar */}
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <div className="flex items-center gap-2">
@@ -260,6 +325,29 @@ export function PianoRoll({
           <Button onClick={handleStop} variant="outline" size="sm">
             <Square className="h-4 w-4" />
           </Button>
+
+          <div className="h-6 w-px bg-gray-600 mx-2" />
+
+          <div className="flex bg-secondary/20 rounded-lg p-0.5 gap-0.5">
+            <Button
+              size="sm"
+              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+              onClick={() => setViewMode('grid')}
+              className="h-8 w-8 p-0"
+              title="Grid View"
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant={viewMode === 'score' ? 'secondary' : 'ghost'}
+              onClick={() => setViewMode('score')}
+              className="h-8 w-8 p-0"
+              title="Score View"
+            >
+              <BookOpen className="h-4 w-4" />
+            </Button>
+          </div>
 
           <div className="h-6 w-px bg-gray-600 mx-2" />
 
@@ -329,10 +417,17 @@ export function PianoRoll({
       </div>
 
       {/* Piano Roll Grid */}
-      <div className="flex">
+      {/* Main View Area */}
+      {viewMode === 'score' ? (
+        <div ref={scoreContainerRef} className="flex-1 overflow-auto bg-white relative">
+          <ScoreView notes={notes} tempo={tempo} width={scoreWidth} scale={zoom} />
+        </div>
+      ) : (
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Piano Keys */}
         <div
-          className="flex-shrink-0 border-r border-gray-600"
+          ref={keysRef}
+          className="flex-shrink-0 border-r border-gray-600 overflow-hidden bg-[#1a1a1a] z-10"
           style={{ width: PIANO_KEY_WIDTH }}
         >
           <div className="relative" style={{ height: GRID_HEIGHT }}>
@@ -360,12 +455,14 @@ export function PianoRoll({
         {/* Note Grid */}
         <div
           ref={canvasRef}
-          className="flex-1 overflow-auto relative bg-gray-850"
-          style={{ maxHeight: 500 }}
+          className="flex-1 overflow-auto relative bg-[#0f0f0f]"
           onClick={!isReadOnly ? handleGridClick : undefined}
           onScroll={(e) => {
             setScrollX(e.currentTarget.scrollLeft);
             setScrollY(e.currentTarget.scrollTop);
+            if (keysRef.current) {
+              keysRef.current.scrollTop = e.currentTarget.scrollTop;
+            }
           }}
         >
           <div
@@ -382,8 +479,8 @@ export function PianoRoll({
               return (
                 <div
                   key={`row-${midi}`}
-                  className={`absolute w-full border-b ${
-                    isBlack ? 'bg-gray-800/50 border-gray-700' : 'bg-gray-750/30 border-gray-700'
+                  className={`absolute w-full border-b z-0 ${
+                    isBlack ? 'bg-[#1e1e1e] border-[#333]' : 'bg-transparent border-[#333]/50'
                   }`}
                   style={{
                     top: i * NOTE_HEIGHT,
@@ -400,8 +497,8 @@ export function PianoRoll({
               return (
                 <div
                   key={`beat-${i}`}
-                  className={`absolute top-0 h-full ${
-                    isMeasure ? 'border-l-2 border-gray-500' : 'border-l border-gray-700'
+                  className={`absolute top-0 h-full z-0 ${
+                    isMeasure ? 'border-l-2 border-[#555]' : 'border-l border-[#333]'
                   }`}
                   style={{ left: time * PIXELS_PER_SECOND }}
                 />
@@ -419,7 +516,7 @@ export function PianoRoll({
               return (
                 <div
                   key={noteId}
-                  className={`absolute rounded cursor-pointer border-2 transition-all ${colorClass} ${
+                  className={`absolute rounded cursor-pointer border-2 transition-all z-10 ${colorClass} ${
                     selectedNote === noteId ? 'border-white ring-2 ring-white/50' : 'border-transparent'
                   } hover:brightness-110`}
                   style={{
@@ -450,6 +547,7 @@ export function PianoRoll({
           </div>
         </div>
       </div>
+      )}
 
       {/* Status Bar */}
       <div className="flex items-center justify-between text-xs text-gray-400 border-t border-gray-700 p-2">
@@ -466,4 +564,4 @@ export function PianoRoll({
   );
 }
 
-export default PianoRoll;
+export default NotesEditor;

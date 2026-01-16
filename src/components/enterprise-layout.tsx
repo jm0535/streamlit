@@ -155,14 +155,20 @@ const sidebarSections: SidebarSection[] = [
         description: "Overview and quick upload",
       },
       {
+        title: "Stem Separation",
+        href: "/stem-separation",
+        icon: Headphones,
+        description: "Isolate instruments from audio",
+      },
+      {
         title: "Transcription",
         href: "/transcription",
         icon: Mic,
         description: "Analyze audio and extract notes",
       },
       {
-        title: "Piano Roll",
-        href: "/piano-roll",
+        title: "Notes",
+        href: "/notes",
         icon: Piano,
         description: "View and edit musical notes",
       },
@@ -176,12 +182,6 @@ const sidebarSections: SidebarSection[] = [
         href: "/batch-processing",
         icon: Package,
         description: "Process multiple files at once",
-      },
-      {
-        title: "Stem Separation",
-        href: "/stem-separation",
-        icon: Headphones,
-        description: "Isolate instruments from audio",
       },
       {
         title: "Audio Analysis",

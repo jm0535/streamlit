@@ -41,8 +41,8 @@ export function AppFooter() {
                 </Link>
               </li>
               <li>
-                <Link href="/piano-roll" className="hover:text-foreground transition-colors">
-                  Piano Roll
+                <Link href="/notes" className="hover:text-foreground transition-colors">
+                  Notes
                 </Link>
               </li>
               <li>

@@ -36,7 +36,7 @@ export default function Dashboard() {
   const [isNavigating, setIsNavigating] = useState(false);
 
   // Zustand store for persisting files
-  const { setPendingFiles } = useFileStore();
+  const { addFiles } = useFileStore();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -61,10 +61,10 @@ export default function Dashboard() {
   ];
 
   const quickActions = [
+    { title: 'Stem Separation', description: 'Isolate instruments', icon: Headphones, href: '/stem-separation', color: 'bg-pink-500' },
     { title: 'Transcription', description: 'Analyze audio files', icon: Mic, href: '/transcription', color: 'bg-blue-500' },
-    { title: 'Piano Roll', description: 'View and edit notes', icon: Piano, href: '/piano-roll', color: 'bg-purple-500' },
+    { title: 'Notes', description: 'View and edit notes', icon: Piano, href: '/notes', color: 'bg-purple-500' },
     { title: 'Batch Processing', description: 'Process multiple files', icon: Package, href: '/batch-processing', color: 'bg-orange-500' },
-    { title: 'Export', description: 'Download your data', icon: Download, href: '/export', color: 'bg-green-500' },
   ];
 
   const handleFilesChange = (files: File[]) => {
@@ -72,25 +72,30 @@ export default function Dashboard() {
     if (files.length > 0) {
       toast({
         title: 'Files ready',
-        description: `${files.length} file(s) selected. Click "Transcribe" to analyze.`,
+        description: `${files.length} file(s) selected. Click "Start Workflow" to begin.`,
       });
     }
   };
 
-  const handleQuickTranscribe = () => {
+  const handleQuickTranscribe = async () => {
     if (uploadedFiles.length > 0) {
       setIsNavigating(true);
 
-      // Store files in Zustand store (persists across navigation)
-      setPendingFiles(uploadedFiles);
-
       toast({
-        title: 'Starting transcription...',
-        description: `Processing ${uploadedFiles.length} file(s)`,
+        title: 'Processing files...',
+        description: `Persisting ${uploadedFiles.length} file(s) for workflow`,
       });
 
-      // Navigate to transcription page
-      router.push('/transcription');
+      // Store files in Zustand store (handles persistence to IDB)
+      await addFiles(uploadedFiles);
+
+      toast({
+        title: 'Ready for processing',
+        description: `Files saved to session`,
+      });
+
+      // Navigate to stem separation page (start of workflow)
+      router.push('/stem-separation');
     } else {
       toast({
         title: 'No files selected',
@@ -100,9 +105,13 @@ export default function Dashboard() {
     }
   };
 
-  const handleBatchProcess = () => {
+  const handleBatchProcess = async () => {
     if (uploadedFiles.length > 0) {
-      setPendingFiles(uploadedFiles);
+      toast({
+        title: 'Processing files...',
+        description: `Persisting ${uploadedFiles.length} file(s) for batch processing`,
+      });
+      await addFiles(uploadedFiles);
       router.push('/batch-processing');
     } else {
       router.push('/batch-processing');
@@ -174,7 +183,7 @@ export default function Dashboard() {
                   ) : (
                     <PlayCircle className="h-4 w-4 mr-2" />
                   )}
-                  Transcribe {uploadedFiles.length} file(s)
+                  Start Workflow ({uploadedFiles.length})
                 </Button>
                 <Button variant="outline" onClick={handleBatchProcess}>
                   <Package className="h-4 w-4 mr-2" />

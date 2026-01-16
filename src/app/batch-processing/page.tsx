@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useFileStore } from "@/lib/file-store";
+import { useFileStore, sharedAudioFileToFile } from "@/lib/file-store";
 import {
   Upload,
   Play,
@@ -139,6 +139,42 @@ export default function BatchProcessingPage() {
       });
     }
   }, [pendingFiles, clearPendingFiles, toast]);
+
+  const { sharedAudioFiles } = useFileStore();
+
+  useEffect(() => {
+    const loadSharedFiles = async () => {
+      if (sharedAudioFiles.length > 0 && batchFiles.length === 0) {
+        const files: File[] = [];
+        for (const sharedFile of sharedAudioFiles) {
+          const file = await sharedAudioFileToFile(sharedFile);
+          if (file) files.push(file);
+        }
+
+        if (files.length > 0) {
+          setUploadedFiles(prev => [...prev, ...files]);
+
+          const newBatchFiles: BatchFile[] = files.map((file) => ({
+            id: Math.random().toString(36).substr(2, 9),
+            file,
+            name: file.name,
+            size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+            status: "pending" as const,
+            progress: 0,
+            selected: true,
+          }));
+
+          setBatchFiles(prev => [...prev, ...newBatchFiles]);
+
+          toast({
+            title: "Files loaded",
+            description: `${files.length} file(s) loaded from session`,
+          });
+        }
+      }
+    };
+    loadSharedFiles();
+  }, [sharedAudioFiles, batchFiles.length, toast]);
 
   const handleFileUpload = useCallback(
     (files: File[]) => {
@@ -544,176 +580,43 @@ export default function BatchProcessingPage() {
       <div className="grid gap-6 lg:grid-cols-4">
         {/* Left Column - Upload & Settings */}
         <div className="space-y-6">
-          {/* File Upload */}
+          {/* Files in Queue - redirect to Dashboard if empty */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Upload className="h-5 w-5" />
-                Add Files
+                {batchFiles.length > 0 ? `Files in Queue (${batchFiles.length})` : 'No Files in Queue'}
               </CardTitle>
               <CardDescription>
-                Add up to 50 files for batch processing
+                {batchFiles.length > 0
+                  ? 'Ready for batch processing'
+                  : 'Upload audio files from the Dashboard'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AudioFileUpload
-                files={[]}
-                onFilesChange={handleFileUpload}
-                maxFiles={50}
-              />
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>Queue size</span>
-                  <span>{batchFiles.length}/50</span>
+              {batchFiles.length === 0 ? (
+                <div className="p-6 text-center">
+                  <Button
+                    onClick={() => window.location.href = '/dashboard'}
+                    variant="default"
+                    size="lg"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Go to Dashboard to Upload Files
+                  </Button>
                 </div>
-                <Progress
-                  value={(batchFiles.length / 50) * 100}
-                  className="w-full"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Batch Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Batch Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">
-                  Concurrent Processing
-                </label>
-                <Select
-                  value={batchSettings.maxConcurrent.toString()}
-                  onValueChange={(value) =>
-                    setBatchSettings((prev) => ({
-                      ...prev,
-                      maxConcurrent: parseInt(value),
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1 File</SelectItem>
-                    <SelectItem value="3">3 Files</SelectItem>
-                    <SelectItem value="5">5 Files</SelectItem>
-                    <SelectItem value="10">10 Files</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">Quality</label>
-                <Select
-                  value={batchSettings.quality}
-                  onValueChange={(value) =>
-                    setBatchSettings((prev) => ({
-                      ...prev,
-                      quality: value as "fast" | "balanced" | "high",
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fast">Fast (Lower Quality)</SelectItem>
-                    <SelectItem value="balanced">Balanced</SelectItem>
-                    <SelectItem value="high">High (Slower)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">Output Format</label>
-                <Select
-                  value={batchSettings.outputFormat}
-                  onValueChange={(value) =>
-                    setBatchSettings((prev) => ({
-                      ...prev,
-                      outputFormat: value as "mid" | "csv" | "both",
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mid">MIDI Only</SelectItem>
-                    <SelectItem value="csv">CSV Only</SelectItem>
-                    <SelectItem value="both">Both Formats</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Audio Transcription</span>
-                  <Checkbox
-                    checked={batchSettings.enableTranscription}
-                    onCheckedChange={(checked) =>
-                      setBatchSettings((prev) => ({
-                        ...prev,
-                        enableTranscription: checked as boolean,
-                      }))
-                    }
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span>Queue size</span>
+                    <span>{batchFiles.length}/50</span>
+                  </div>
+                  <Progress
+                    value={(batchFiles.length / 50) * 100}
+                    className="w-full"
                   />
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Stem Separation</span>
-                  <Checkbox
-                    checked={batchSettings.enableStemSeparation}
-                    onCheckedChange={(checked) =>
-                      setBatchSettings((prev) => ({
-                        ...prev,
-                        enableStemSeparation: checked as boolean,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Audio Analysis</span>
-                  <Checkbox
-                    checked={batchSettings.enableAnalysis}
-                    onCheckedChange={(checked) =>
-                      setBatchSettings((prev) => ({
-                        ...prev,
-                        enableAnalysis: checked as boolean,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Auto Export</span>
-                  <Checkbox
-                    checked={batchSettings.autoExport}
-                    onCheckedChange={(checked) =>
-                      setBatchSettings((prev) => ({
-                        ...prev,
-                        autoExport: checked as boolean,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Organize by Folder</span>
-                  <Checkbox
-                    checked={batchSettings.organizeByFolder}
-                    onCheckedChange={(checked) =>
-                      setBatchSettings((prev) => ({
-                        ...prev,
-                        organizeByFolder: checked as boolean,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -39,12 +39,18 @@ export default function HomePage() {
     },
     {
       step: 2,
+      title: 'Separate Stems',
+      description: 'Isolate vocals, drums, bass, and other instruments',
+      icon: Headphones,
+    },
+    {
+      step: 3,
       title: 'Analyze & Transcribe',
       description: 'Extract notes, tempo, and musical data',
       icon: BarChart3,
     },
     {
-      step: 3,
+      step: 4,
       title: 'Export Results',
       description: 'Download MIDI, PDF, or CSV files',
       icon: Download,
@@ -60,10 +66,10 @@ export default function HomePage() {
       color: 'bg-blue-500',
     },
     {
-      title: 'Piano Roll',
+      title: 'Notes',
       description: 'View and edit notes in DAW-style grid',
       icon: Piano,
-      href: '/piano-roll',
+      href: '/notes',
       color: 'bg-purple-500',
     },
     {
@@ -87,16 +93,16 @@ export default function HomePage() {
     if (files.length > 0) {
       toast({
         title: 'Files ready',
-        description: `${files.length} file(s) selected. Click "Start Transcription" to analyze.`,
+        description: `${files.length} file(s) selected. Click "Start Workflow" to analyze.`,
       });
     }
   };
 
   const handleStartTranscription = () => {
     if (uploadedFiles.length > 0) {
-      // Store files in session storage for transcription page
+      // Store files in session storage for workflow
       sessionStorage.setItem('pendingFiles', JSON.stringify(uploadedFiles.map(f => f.name)));
-      router.push('/transcription');
+      router.push('/stem-separation');
     }
   };
 
@@ -117,7 +123,7 @@ export default function HomePage() {
       </div>
 
       {/* Workflow Steps */}
-      <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+      <div className="grid md:grid-cols-4 gap-4 max-w-6xl mx-auto">
         {workflow.map((step, index) => (
           <div key={step.step} className="relative">
             <Card className="text-center h-full">
@@ -162,7 +168,7 @@ export default function HomePage() {
             <div className="flex justify-center">
               <Button size="lg" onClick={handleStartTranscription}>
                 <PlayCircle className="h-5 w-5 mr-2" />
-                Start Transcription
+                Start Workflow
               </Button>
             </div>
           )}

@@ -42,9 +42,9 @@ const NOTE_COLORS: Record<number, string> = {
  * Export piano roll visualization to PDF
  * Uses canvas-based rendering and downloads as PDF via print dialog
  */
-export function exportPianoRollToPDF(notes: Note[], options: PDFExportOptions = {}): void {
+export function exportNotesToPDF(notes: Note[], options: PDFExportOptions = {}): void {
   const {
-    title = 'Piano Roll Export',
+    title = 'Notes Export',
     tempo = 120,
     duration = 30,
   } = options;
@@ -289,6 +289,6 @@ export function exportNotesAsText(notes: Note[]): string {
 }
 
 export default {
-  exportPianoRollToPDF,
+  exportNotesToPDF,
   exportNotesAsText,
 };

@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useFileStore, convertToSharedNotes } from '@/lib/file-store';
+import { useFileStore, convertToSharedNotes, fileToSharedAudioFile } from '@/lib/file-store';
 import {
   Mic,
   Play,
@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { transcribeWithBasicPitch, isBasicPitchAvailable } from "@/lib/basic-pitch-service";
 
 interface TranscriptionResult {
   id: string;
@@ -88,6 +89,7 @@ export default function TranscriptionPage() {
   const router = useRouter();
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState({ percent: 0, status: '' });
   const [results, setResults] = useState<TranscriptionResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<TranscriptionResult | null>(null);
   const [currentMetadata, setCurrentMetadata] = useState<Metadata>({});
@@ -96,7 +98,14 @@ export default function TranscriptionPage() {
   const audioRef = useRef<HTMLAudioElement>(null);
 
   // Get pending files and piano roll functions from file store
-  const { pendingFiles, clearPendingFiles, setPianoRollNotes } = useFileStore();
+  const {
+    pendingFiles,
+    clearPendingFiles,
+    setPianoRollNotes,
+    setActiveFiles,
+    setHasTranscriptionResults,
+    addSharedAudioFile,
+  } = useFileStore();
 
   const [processingSettings, setProcessingSettings] = useState<ProcessingSettings>({
     sensitivity: 0.7,
@@ -121,6 +130,35 @@ export default function TranscriptionPage() {
     }
   }, [pendingFiles, clearPendingFiles, toast]);
 
+  // Load transcription results from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const storedResults = sessionStorage.getItem('transcriptionResults');
+      if (storedResults) {
+        const parsed = JSON.parse(storedResults);
+        setResults(parsed);
+        if (parsed.length > 0) {
+          setSelectedResult(parsed[0]);
+          console.log('📂 Loaded transcription results from session:', parsed.length);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load transcription results:', err);
+    }
+  }, []);
+
+  // Save transcription results to sessionStorage whenever they change
+  useEffect(() => {
+    if (results.length > 0) {
+      try {
+        sessionStorage.setItem('transcriptionResults', JSON.stringify(results));
+        console.log('💾 Saved transcription results to session:', results.length);
+      } catch (err) {
+        console.error('Failed to save transcription results:', err);
+      }
+    }
+  }, [results]);
+
   const handleFileUpload = useCallback((files: File[]) => {
     setUploadedFiles(files);
     setResults([]);
@@ -142,55 +180,126 @@ export default function TranscriptionPage() {
     }
 
     setIsProcessing(true);
+    setProcessingProgress({ percent: 0, status: 'Initializing...' });
 
     try {
-      // Simulate processing for each file
       const newResults: TranscriptionResult[] = [];
 
-      for (const file of uploadedFiles) {
-        // Simulate processing time
-        await new Promise(resolve => setTimeout(resolve, 2000));
+      for (let fileIndex = 0; fileIndex < uploadedFiles.length; fileIndex++) {
+        const file = uploadedFiles[fileIndex];
+        const fileProgress = (fileIndex / uploadedFiles.length) * 100;
 
-        const mockResult: TranscriptionResult = {
+        setProcessingProgress({
+          percent: fileProgress,
+          status: `Processing ${file.name} (${fileIndex + 1}/${uploadedFiles.length})...`
+        });
+
+        // Decode audio file to AudioBuffer
+        const arrayBuffer = await file.arrayBuffer();
+        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        const startTime = performance.now();
+
+        // Use Basic Pitch ML for transcription
+        const transcriptionResult = await transcribeWithBasicPitch(
+          audioBuffer,
+          {
+            onsetThreshold: processingSettings.sensitivity,
+            frameThreshold: processingSettings.sensitivity * 0.6,
+            minNoteLength: Math.round(processingSettings.minNoteDuration * 86), // Convert seconds to frames
+            includePitchBends: processingSettings.pitchBend,
+            inferOnsets: true,
+            melodiaTrick: true,
+          },
+          (progress) => {
+            const totalProgress = fileProgress + (progress.percentComplete / uploadedFiles.length);
+            setProcessingProgress({
+              percent: totalProgress,
+              status: `${file.name}: ${progress.status}`
+            });
+          }
+        );
+
+        const processingTime = (performance.now() - startTime) / 1000;
+
+        // Convert to TranscriptionResult format
+        const result: TranscriptionResult = {
           id: Math.random().toString(36).substr(2, 9),
           fileName: file.name,
-          duration: Math.random() * 300 + 60, // 1-6 minutes
-          notes: Array.from({ length: Math.floor(Math.random() * 200) + 50 }, (_, i) => ({
-            pitch: Math.floor(Math.random() * 88) + 21, // Piano keys
-            startTime: i * 0.1,
-            duration: Math.random() * 0.5 + 0.1,
-            velocity: Math.floor(Math.random() * 127),
-            confidence: Math.random() * 0.3 + 0.7
+          duration: transcriptionResult.duration,
+          notes: transcriptionResult.notes.map(note => ({
+            pitch: note.midi,
+            startTime: note.startTime,
+            duration: note.duration,
+            velocity: note.velocity,
+            confidence: note.confidence,
           })),
-          midiData: 'mock-midi-data',
-          confidence: Math.random() * 0.1 + 0.9,
-          detectedInstruments: ['Piano', 'Violin', 'Cello'].slice(0, Math.floor(Math.random() * 3) + 1),
-          tempo: Math.floor(Math.random() * 60) + 80,
-          keySignature: ['C Major', 'G Major', 'D Minor', 'A Minor'][Math.floor(Math.random() * 4)],
-          timeSignature: ['4/4', '3/4', '6/8'][Math.floor(Math.random() * 3)],
-          processingTime: Math.random() * 5 + 2
+          midiData: 'basic-pitch-transcription',
+          confidence: transcriptionResult.confidence,
+          detectedInstruments: ['Detected via ML'],
+          tempo: transcriptionResult.tempo,
+          keySignature: detectKeySignature(transcriptionResult.notes),
+          timeSignature: '4/4', // Tempo-based detection could be added
+          processingTime,
         };
 
-        newResults.push(mockResult);
+        newResults.push(result);
+        await audioContext.close();
+
+        // Share this audio file with other processing pages
+        const sharedFile = await fileToSharedAudioFile(file);
+        addSharedAudioFile(sharedFile);
       }
 
       setResults(newResults);
       setSelectedResult(newResults[0]);
+      setProcessingProgress({ percent: 100, status: 'Complete!' });
+
+      // Mark that we have transcription results for other pages to use
+      setHasTranscriptionResults(true);
+      setActiveFiles(uploadedFiles);
 
       toast({
         title: "Transcription complete",
-        description: `Successfully processed ${newResults.length} file(s)`,
+        description: `Successfully processed ${newResults.length} file(s) using Basic Pitch ML`,
       });
     } catch (error) {
+      console.error('Transcription error:', error);
       toast({
         title: "Transcription failed",
-        description: "An error occurred during processing",
+        description: error instanceof Error ? error.message : "An error occurred during processing",
         variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
     }
-  }, [uploadedFiles, toast]);
+  }, [uploadedFiles, processingSettings, toast, addSharedAudioFile, setHasTranscriptionResults, setActiveFiles]);
+
+  // Helper function to detect key signature from notes
+  function detectKeySignature(notes: any[]): string {
+    if (notes.length === 0) return 'Unknown';
+
+    // Count pitch classes
+    const pitchCounts = new Array(12).fill(0);
+    notes.forEach(note => {
+      pitchCounts[note.midi % 12]++;
+    });
+
+    // Simple heuristic: find most common pitch class
+    const maxIndex = pitchCounts.indexOf(Math.max(...pitchCounts));
+    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+    // Check for major/minor based on third
+    const majorThird = (maxIndex + 4) % 12;
+    const minorThird = (maxIndex + 3) % 12;
+
+    if (pitchCounts[majorThird] > pitchCounts[minorThird]) {
+      return `${noteNames[maxIndex]} Major`;
+    } else {
+      return `${noteNames[maxIndex]} Minor`;
+    }
+  }
 
   const exportMIDI = useCallback((result: TranscriptionResult) => {
     // Simulate MIDI export
@@ -349,73 +458,53 @@ export default function TranscriptionPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Upload & Settings */}
+        {/* Left Column - Files & Settings */}
         <div className="space-y-6">
-          {/* File Upload */}
-          <div className="form-container form-container-md">
-            <div className="form-section">
-              <div className="form-section-header">
-                <h2 className="form-section-title flex items-center gap-2">
-                  <Upload className="h-5 w-5" />
-                  Upload Audio Files
-                </h2>
-                <p className="form-section-description">Supported formats: MP3, WAV, FLAC, M4A, OGG</p>
-              </div>
-              <div className="form-field form-field-lg">
-                <AudioFileUpload
-                  files={uploadedFiles}
-                  onFilesChange={handleFileUpload}
-                  maxFiles={10}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Processing Settings */}
-          <div className="form-container form-container-md">
-            <div className="form-section">
-              <div className="form-section-header">
-                <h2 className="form-section-title flex items-center gap-2">
-                  <Sliders className="h-5 w-5" />
-                  Processing Settings
-                </h2>
-              </div>
-              <div className="space-y-4">
-                <div className="form-field">
-                  <label htmlFor="sensitivity-slider" className="form-label">Sensitivity</label>
-                  <input
-                    id="sensitivity-slider"
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={processingSettings.sensitivity * 100}
-                    onChange={(e) => updateSetting('sensitivity', parseInt(e.target.value) / 100)}
-                    className="w-full"
-                    aria-label="Sensitivity control for transcription accuracy"
-                    title="Adjust sensitivity for note detection"
-                  />
-                  <p className="form-helper-text">{Math.round(processingSettings.sensitivity * 100)}%</p>
+          {/* Selected Files or Go to Dashboard prompt */}
+          {uploadedFiles.length === 0 && results.length === 0 ? (
+            <div className="form-container form-container-md">
+              <div className="form-section">
+                <div className="form-section-header">
+                  <h2 className="form-section-title flex items-center gap-2">
+                    <FileAudio className="h-5 w-5" />
+                    No Audio Files
+                  </h2>
+                  <p className="form-section-description">Upload audio files from the Dashboard to start transcription</p>
                 </div>
-
-                <div className="form-field">
-                  <label htmlFor="duration-slider" className="form-label">Minimum Note Duration</label>
-                  <input
-                    id="duration-slider"
-                    type="range"
-                    min="50"
-                    max="500"
-                    step="50"
-                    value={processingSettings.minNoteDuration * 1000}
-                    onChange={(e) => updateSetting('minNoteDuration', parseInt(e.target.value) / 1000)}
-                    className="w-full"
-                    aria-label="Minimum note duration in milliseconds"
-                    title="Set the minimum duration for detected notes"
-                  />
-                  <p className="form-helper-text">{processingSettings.minNoteDuration * 1000}ms</p>
+                <div className="p-6 text-center">
+                  <Button
+                    onClick={() => router.push('/dashboard')}
+                    variant="default"
+                    size="lg"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Go to Dashboard to Upload Files
+                  </Button>
                 </div>
               </div>
             </div>
-          </div>
+          ) : uploadedFiles.length > 0 ? (
+            <div className="form-container form-container-md">
+              <div className="form-section">
+                <div className="form-section-header">
+                  <h2 className="form-section-title flex items-center gap-2">
+                    <FileAudio className="h-5 w-5" />
+                    Selected Files ({uploadedFiles.length})
+                  </h2>
+                  <p className="form-section-description">Ready for transcription</p>
+                </div>
+                <div className="space-y-2 p-4">
+                  {uploadedFiles.map((file, idx) => (
+                    <div key={idx} className="flex items-center gap-2 p-2 bg-muted rounded">
+                      <FileAudio className="h-4 w-4" />
+                      <span className="text-sm truncate flex-1">{file.name}</span>
+                      <span className="text-xs text-muted-foreground">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {/* Middle Column - Results */}
@@ -537,12 +626,28 @@ export default function TranscriptionPage() {
                     onClick={() => {
                       // Convert notes to shared format and navigate to piano roll
                       const sharedNotes = convertToSharedNotes(selectedResult.notes);
+                      console.log('🎵 Sending notes to Piano Roll:', {
+                        originalCount: selectedResult.notes.length,
+                        sharedCount: sharedNotes.length,
+                        sharedNotes
+                      });
+
+                      // Save to Zustand store
                       setPianoRollNotes(sharedNotes);
+
+                      // ALSO save to sessionStorage as backup
+                      try {
+                        sessionStorage.setItem('pianoRollNotes', JSON.stringify(sharedNotes));
+                        console.log('✅ Notes saved to sessionStorage');
+                      } catch (err) {
+                        console.error('Failed to save to sessionStorage:', err);
+                      }
+
                       toast({
                         title: 'Opening Piano Roll...',
                         description: `Sending ${selectedResult.notes.length} notes to editor`,
                       });
-                      router.push('/piano-roll');
+                      router.push('/notes');
                     }}
                     variant="default"
                     className="w-full mt-2"
@@ -580,8 +685,15 @@ export default function TranscriptionPage() {
               <div className="flex items-center gap-4">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <div className="flex-1">
-                  <p className="text-sm font-medium mb-2">Processing audio files...</p>
-                  <Progress value={undefined} className="w-full" />
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="text-sm font-medium">
+                      {processingProgress.status || 'Processing audio files...'}
+                    </p>
+                    <span className="text-sm text-muted-foreground">
+                      {Math.round(processingProgress.percent)}%
+                    </span>
+                  </div>
+                  <Progress value={processingProgress.percent} className="w-full" />
                 </div>
               </div>
             </div>

@@ -3,10 +3,10 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useFileStore } from '@/lib/file-store';
-import { PianoRoll } from '@/components/piano-roll';
+import { NotesEditor } from '@/components/notes-editor';
 import { AudioFileUpload } from '@/components/audio-file-upload';
 import { Note, createMIDI, downloadMIDIFromNotes } from '@/lib/midi-utils';
-import { exportPianoRollToPDF } from '@/lib/pdf-export';
+import { exportNotesToPDF } from '@/lib/pdf-export';
 import { loadAndAnalyzeAudio } from '@/lib/audio-analysis';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ import {
   Plus,
 } from 'lucide-react';
 
-export default function PianoRollPage() {
+export default function NotesPage() {
   const { toast } = useToast();
   const [files, setFiles] = useState<File[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
@@ -43,9 +43,23 @@ export default function PianoRollPage() {
 
   // Load notes from store on mount (when navigating from Transcription page)
   useEffect(() => {
-    if (hasPendingPianoRollNotes && pianoRollNotes.length > 0) {
+    let notesToLoad = pianoRollNotes;
+
+    // If Zustand store is empty, try sessionStorage as backup
+    if (notesToLoad.length === 0) {
+      try {
+        const stored = sessionStorage.getItem('pianoRollNotes');
+        if (stored) {
+          notesToLoad = JSON.parse(stored);
+        }
+      } catch (err) {
+        console.error('Failed to load from sessionStorage:', err);
+      }
+    }
+
+    if (notesToLoad.length > 0) {
       // Convert to Note type expected by PianoRoll component
-      const convertedNotes: Note[] = pianoRollNotes.map(n => ({
+      const convertedNotes: Note[] = notesToLoad.map((n: any) => ({
         midi: n.midi,
         name: n.name,
         octave: n.octave,
@@ -57,20 +71,29 @@ export default function PianoRollPage() {
       }));
 
       setNotes(convertedNotes);
-      setFileName('Transcription Results');
+      setFileName('Stem Analysis Results');
 
       // Calculate duration based on notes
       const maxTime = Math.max(...convertedNotes.map(n => n.startTime + n.duration));
       setDuration(Math.ceil(maxTime) + 5);
 
-      clearPianoRollNotes();
-
       toast({
-        title: 'Notes loaded from transcription',
+        title: 'Notes loaded',
         description: `${convertedNotes.length} notes ready for editing`,
       });
     }
-  }, [hasPendingPianoRollNotes, pianoRollNotes, clearPianoRollNotes, toast]);
+  }, [pianoRollNotes, toast]);
+
+  // Save notes to sessionStorage whenever they change (for persistence)
+  useEffect(() => {
+    if (notes.length > 0) {
+      try {
+        sessionStorage.setItem('pianoRollNotes', JSON.stringify(notes));
+      } catch (err) {
+        console.error('Failed to save piano roll notes:', err);
+      }
+    }
+  }, [notes]);
 
   // Demo notes for empty state
   const demoNotes: Note[] = [
@@ -171,7 +194,7 @@ export default function PianoRollPage() {
     }
 
     try {
-      exportPianoRollToPDF(notes, {
+      exportNotesToPDF(notes, {
         title: fileName || 'Composition',
         tempo,
         duration,
@@ -224,10 +247,10 @@ export default function PianoRollPage() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-3">
             <Piano className="h-8 w-8" />
-            Piano Roll Editor
+            Notes View & Editor
           </h1>
           <p className="text-muted-foreground mt-1">
-            DAW-style visual note editor with playback and export
+            View, edit, and export musical notes from your tracks
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -240,6 +263,19 @@ export default function PianoRollPage() {
           <Badge variant="secondary">
             {notes.length} notes
           </Badge>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+                setIsProcessing(false);
+                setNotes([]);
+                setFiles([]);
+                setFileName('');
+                toast({ title: "Reset complete", description: "All states have been cleared." });
+            }}
+          >
+            Force Reset
+          </Button>
         </div>
       </div>
 
@@ -249,10 +285,6 @@ export default function PianoRollPage() {
           <TabsTrigger value="editor">
             <Music className="h-4 w-4 mr-2" />
             Editor
-          </TabsTrigger>
-          <TabsTrigger value="upload">
-            <Upload className="h-4 w-4 mr-2" />
-            Import
           </TabsTrigger>
         </TabsList>
 
@@ -294,7 +326,7 @@ export default function PianoRollPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-4">
-              <PianoRoll
+              <NotesEditor
                 notes={notes}
                 onNotesChange={handleNotesChange}
                 duration={duration}

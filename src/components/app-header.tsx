@@ -83,10 +83,10 @@ export function AppHeader() {
                 Transcription
               </Link>
               <Link
-                href="/piano-roll"
+                href="/notes"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                Piano Roll
+                Notes
               </Link>
               <Link
                 href="/help"

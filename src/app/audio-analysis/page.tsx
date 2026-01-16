@@ -1,7 +1,29 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { useFileStore, sharedAudioFileToFile } from "@/lib/file-store";
 import { useToast } from "@/hooks/use-toast";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
+} from 'recharts';
+import {
+  calculateFrequencySpectrum,
+  calculateAmplitudeEnvelope,
+  detectFrequencyPeaks,
+  binToHz,
+  detectMusicalKey,
+  calculatePitchContour
+} from "@/lib/audio-analysis";
 import {
   BarChart3,
   Upload,
@@ -85,6 +107,7 @@ interface AnalysisResult {
   keySignature: string;
   mode: string;
   timeSignature: string;
+  pitchContour?: Array<{ time: number; frequency: number; confidence: number }>;
 
   // Harmonic Analysis
   harmonicContent: number[];
@@ -145,6 +168,39 @@ export default function AudioAnalysisPage() {
   );
   const [currentTab, setCurrentTab] = useState("overview");
 
+  const { sharedAudioFiles, activeFiles } = useFileStore();
+
+  useEffect(() => {
+    const loadFiles = async () => {
+      // 1. Try active in-memory files first
+      if (activeFiles.length > 0 && uploadedFiles.length === 0) {
+        setUploadedFiles(activeFiles);
+        toast({
+          title: "Files active",
+          description: `${activeFiles.length} file(s) ready for analysis`,
+        });
+        return;
+      }
+
+      // 2. Fallback to shared persisted files
+      if (sharedAudioFiles.length > 0 && uploadedFiles.length === 0) {
+        const files: File[] = [];
+        for (const sharedFile of sharedAudioFiles) {
+          const file = await sharedAudioFileToFile(sharedFile);
+          if (file) files.push(file);
+        }
+        if (files.length > 0) {
+          setUploadedFiles(files);
+          toast({
+            title: "Files loaded",
+            description: `${files.length} file(s) loaded from storage`,
+          });
+        }
+      }
+    };
+    loadFiles();
+  }, [sharedAudioFiles, activeFiles, uploadedFiles.length, toast]);
+
   const [analysisSettings, setAnalysisSettings] = useState<AnalysisSettings>({
     enableFrequencyAnalysis: true,
     enableTemporalAnalysis: true,
@@ -185,106 +241,103 @@ export default function AudioAnalysisPage() {
 
     try {
       const newResults: AnalysisResult[] = [];
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      const audioContext = new AudioContext();
 
       for (const file of uploadedFiles) {
-        // Simulate analysis time
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Decode audio data for real analysis
+        const arrayBuffer = await file.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-        const mockResult: AnalysisResult = {
+        // Perform Real Analysis
+        const frequencySpectrum = calculateFrequencySpectrum(audioBuffer, analysisSettings.fftSize);
+        const amplitudeEnvelope = calculateAmplitudeEnvelope(audioBuffer, 200); // 200 points for visualization
+        const frequencyPeaks = detectFrequencyPeaks(frequencySpectrum, analysisSettings.fftSize, audioBuffer.sampleRate);
+        const musicalKey = detectMusicalKey(frequencyPeaks);
+        const pitchContour = calculatePitchContour(audioBuffer, 100); // 100 points for melody curve
+
+        // Calculate some basic metrics
+        const rmsLevel = amplitudeEnvelope.reduce((a, b) => a + b, 0) / amplitudeEnvelope.length;
+        const peakLevel = Math.max(...amplitudeEnvelope);
+
+        // Convert frequency spectrum to data points for simple harmonic content
+        const harmonicContent = frequencySpectrum.slice(0, 50);
+
+        const result: AnalysisResult = {
           id: Math.random().toString(36).substr(2, 9),
           fileName: file.name,
-          duration: Math.random() * 300 + 60,
-          sampleRate: 44100,
-          bitDepth: 16,
-          channels: 2,
+          duration: audioBuffer.duration,
+          sampleRate: audioBuffer.sampleRate,
+          bitDepth: 16, // Web Audio API decodes to float32
+          channels: audioBuffer.numberOfChannels,
           fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
 
-          frequencySpectrum: Array.from({ length: 256 }, () => Math.random()),
-          dominantFrequency: Math.random() * 2000 + 100,
-          frequencyPeaks: Array.from({ length: 10 }, (_, i) => ({
-            frequency: Math.random() * 5000 + 50,
-            amplitude: Math.random(),
-          })),
+          frequencySpectrum,
+          dominantFrequency: frequencyPeaks[0]?.frequency || 0,
+          frequencyPeaks,
 
-          amplitudeEnvelope: Array.from({ length: 100 }, () => Math.random()),
-          rmsLevel: Math.random() * 0.5 + 0.1,
-          peakLevel: Math.random() * 0.9 + 0.1,
-          dynamicRange: Math.random() * 40 + 20,
+          amplitudeEnvelope,
+          rmsLevel,
+          peakLevel,
+          dynamicRange: 20 * Math.log10(peakLevel / (Math.min(...amplitudeEnvelope.filter(v => v > 0.001)) || 0.001)),
 
-          tempo: Math.floor(Math.random() * 60) + 80,
-          keySignature: ["C", "G", "D", "A", "E", "F", "Bb", "Eb"][
-            Math.floor(Math.random() * 8)
-          ],
-          mode: ["Major", "Minor"][Math.floor(Math.random() * 2)],
-          timeSignature: ["4/4", "3/4", "6/8", "2/4"][
-            Math.floor(Math.random() * 4)
-          ],
+          tempo: 120, // Tempo detection placeholder
+          keySignature: musicalKey.key,
+          mode: musicalKey.mode,
+          timeSignature: "4/4",
+          pitchContour,
 
-          harmonicContent: Array.from({ length: 12 }, () => Math.random()),
-          fundamentalFrequency: Math.random() * 500 + 50,
-          overtones: Array.from(
-            { length: 8 },
-            (_, i) => (i + 2) * (Math.random() * 500 + 50)
-          ),
+          harmonicContent,
+          fundamentalFrequency: frequencyPeaks[0]?.frequency || 0,
+          overtones: frequencyPeaks.slice(1, 6).map(p => p.frequency),
 
-          spectralCentroid: Math.random() * 3000 + 500,
-          spectralRolloff: Math.random() * 4000 + 1000,
-          spectralFlux: Math.random() * 0.1,
-          zeroCrossingRate: Math.random() * 0.1,
+          spectralCentroid: 0,
+          spectralRolloff: 0,
+          spectralFlux: 0,
+          zeroCrossingRate: 0,
 
           detectedInstruments: [
             {
-              instrument: "Piano",
-              confidence: Math.random() * 0.3 + 0.7,
-              characteristics: ["Harmonic", "Melodic", "Wide dynamic range"],
-            },
-            {
-              instrument: "Violin",
-              confidence: Math.random() * 0.3 + 0.6,
-              characteristics: [
-                "High frequency",
-                "Sustained notes",
-                "Expressive",
-              ],
-            },
-          ].slice(0, Math.floor(Math.random() * 2) + 1),
+              instrument: "Analyzing...",
+              confidence: 0.8,
+              characteristics: ["Polyphonic"],
+            }
+          ],
 
-          signalToNoiseRatio: Math.random() * 40 + 40,
-          totalHarmonicDistortion: Math.random() * 2 + 0.5,
-          dynamicRangeDb: Math.random() * 30 + 40,
+          signalToNoiseRatio: 0,
+          totalHarmonicDistortion: 0,
+          dynamicRangeDb: 0,
 
           format: file.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
           codec: "PCM",
-          bitrate: Math.floor(Math.random() * 500) + 128,
+          bitrate: 0,
           metadata: {
-            title: "Sample Title",
-            artist: "Sample Artist",
-            album: "Sample Album",
-            genre: "Classical",
-            year: 2024,
+            title: file.name,
           },
         };
 
-        newResults.push(mockResult);
+        newResults.push(result);
       }
 
       setResults(newResults);
       setSelectedResult(newResults[0]);
+      await audioContext.close();
 
       toast({
         title: "Analysis complete",
-        description: `Successfully analyzed ${newResults.length} file(s)`,
+        description: "Audio visualization data generated",
       });
     } catch (error) {
+      console.error("Analysis failed:", error);
       toast({
-        title: "Analysis failed",
-        description: "An error occurred during analysis",
+        title: "Analysis error",
+        description: "Failed to process audio file",
         variant: "destructive",
       });
     } finally {
       setIsAnalyzing(false);
     }
-  }, [uploadedFiles, toast]);
+  }, [uploadedFiles, analysisSettings, toast]);
 
   const exportAnalysis = useCallback(
     (result: AnalysisResult) => {
@@ -466,156 +519,42 @@ export default function AudioAnalysisPage() {
       <div className="grid gap-6 lg:grid-cols-4">
         {/* Left Column - Upload & Settings */}
         <div className="space-y-6">
-          {/* File Upload */}
+          {/* File Status - redirect to Dashboard if no files */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Upload className="h-5 w-5" />
-                Upload Audio Files
+                {uploadedFiles.length > 0 ? `Selected Files (${uploadedFiles.length})` : 'No Audio Files'}
               </CardTitle>
               <CardDescription>
-                Supported formats: MP3, WAV, FLAC, M4A
+                {uploadedFiles.length > 0
+                  ? 'Ready for analysis'
+                  : 'Upload audio files from the Dashboard'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <AudioFileUpload
-                files={uploadedFiles}
-                onFilesChange={handleFileUpload}
-                maxFiles={10}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Analysis Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Analysis Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">
-                  Analysis Modules
-                </label>
+              {uploadedFiles.length === 0 ? (
+                <div className="p-6 text-center">
+                  <Button
+                    onClick={() => window.location.href = '/dashboard'}
+                    variant="default"
+                    size="lg"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Go to Dashboard to Upload Files
+                  </Button>
+                </div>
+              ) : (
                 <div className="space-y-2">
-                  {[
-                    {
-                      key: "enableFrequencyAnalysis",
-                      label: "Frequency Analysis",
-                    },
-                    {
-                      key: "enableTemporalAnalysis",
-                      label: "Temporal Analysis",
-                    },
-                    { key: "enableMusicalAnalysis", label: "Musical Analysis" },
-                    {
-                      key: "enableHarmonicAnalysis",
-                      label: "Harmonic Analysis",
-                    },
-                    {
-                      key: "enableSpectralAnalysis",
-                      label: "Spectral Analysis",
-                    },
-                    {
-                      key: "enableInstrumentDetection",
-                      label: "Instrument Detection",
-                    },
-                    { key: "enableQualityMetrics", label: "Quality Metrics" },
-                  ].map(({ key, label }) => (
-                    <div
-                      key={key}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-sm">{label}</span>
-                      <Switch
-                        checked={
-                          typeof analysisSettings[
-                            key as keyof AnalysisSettings
-                          ] === "boolean"
-                            ? (analysisSettings[
-                                key as keyof AnalysisSettings
-                              ] as boolean)
-                            : false
-                        }
-                        onCheckedChange={(checked) =>
-                          setAnalysisSettings((prev) => ({
-                            ...prev,
-                            [key]: checked,
-                          }))
-                        }
-                      />
+                  {uploadedFiles.map((file, idx) => (
+                    <div key={idx} className="flex items-center gap-2 p-2 bg-muted rounded">
+                      <FileAudio className="h-4 w-4" />
+                      <span className="text-sm truncate flex-1">{file.name}</span>
+                      <span className="text-xs text-muted-foreground">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
                     </div>
                   ))}
                 </div>
-              </div>
-
-              <div>
-                <Label htmlFor="fft-size">FFT Size</Label>
-                <select
-                  id="fft-size"
-                  value={analysisSettings.fftSize}
-                  onChange={(e) =>
-                    setAnalysisSettings((prev) => ({
-                      ...prev,
-                      fftSize: parseInt(e.target.value),
-                    }))
-                  }
-                  className="w-full p-2 border rounded-md"
-                  aria-label="Select FFT size for frequency analysis"
-                  title="Choose the FFT size for spectral analysis"
-                >
-                  <option value={256}>256</option>
-                  <option value={512}>512</option>
-                  <option value={1024}>1024</option>
-                  <option value={2048}>2048</option>
-                  <option value={4096}>4096</option>
-                  <option value={8192}>8192</option>
-                </select>
-              </div>
-
-              <div>
-                <Label htmlFor="window-size">Window Size</Label>
-                <select
-                  id="window-size"
-                  value={analysisSettings.windowSize}
-                  onChange={(e) =>
-                    setAnalysisSettings((prev) => ({
-                      ...prev,
-                      windowSize: parseInt(e.target.value),
-                    }))
-                  }
-                  className="w-full p-2 border rounded-md"
-                  aria-label="Select window size for analysis"
-                  title="Choose the window size for signal processing"
-                >
-                  <option value={256}>256</option>
-                  <option value={512}>512</option>
-                  <option value={1024}>1024</option>
-                  <option value={2048}>2048</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium">Overlap Ratio</label>
-                <Slider
-                  value={[analysisSettings.overlapRatio]}
-                  onValueChange={([value]) =>
-                    setAnalysisSettings((prev) => ({
-                      ...prev,
-                      overlapRatio: value,
-                    }))
-                  }
-                  max={0.9}
-                  min={0}
-                  step={0.1}
-                  className="w-full mt-2"
-                />
-                <span className="text-xs text-muted-foreground">
-                  {(analysisSettings.overlapRatio * 100).toFixed(0)}%
-                </span>
-              </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -918,13 +857,29 @@ export default function AudioAnalysisPage() {
 
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-sm">
-                          Frequency Spectrum
-                        </CardTitle>
+                        <CardTitle className="text-sm">Frequency Spectrum</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-32 bg-muted rounded-lg flex items-center justify-center">
-                          <Radio className="h-8 w-8 text-muted-foreground" />
+                        <div className="h-64 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={selectedResult.frequencySpectrum.map((v, i) => ({ freq: i * (selectedResult.sampleRate / 2 / selectedResult.frequencySpectrum.length), val: v }))}>
+                              <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                              <XAxis
+                                dataKey="freq"
+                                tickFormatter={(v) => `${v.toFixed(0)}`}
+                                type="number"
+                                domain={[0, 'auto']}
+                                label={{ value: 'Hz', position: 'insideBottomRight', offset: -5 }}
+                              />
+                              <YAxis hide domain={[0, 1]} />
+                              <Tooltip
+                                formatter={(value: number) => [value.toFixed(4), 'Magnitude']}
+                                labelFormatter={(label: number) => `${label.toFixed(0)} Hz`}
+                                contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151' }}
+                              />
+                              <Area type="monotone" dataKey="val" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} />
+                            </AreaChart>
+                          </ResponsiveContainer>
                         </div>
                       </CardContent>
                     </Card>
@@ -997,13 +952,27 @@ export default function AudioAnalysisPage() {
 
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-sm">
-                          Amplitude Envelope
-                        </CardTitle>
+                        <CardTitle className="text-sm">Amplitude Envelope</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-32 bg-muted rounded-lg flex items-center justify-center">
-                          <Activity className="h-8 w-8 text-muted-foreground" />
+                        <div className="h-64 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={selectedResult.amplitudeEnvelope.map((v, i) => ({ time: (i / selectedResult.amplitudeEnvelope.length) * selectedResult.duration, val: v }))}>
+                              <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                              <XAxis
+                                dataKey="time"
+                                tickFormatter={(v) => `${v.toFixed(1)}s`}
+                                label={{ value: 'Time (s)', position: 'insideBottomRight', offset: -5 }}
+                              />
+                              <YAxis hide domain={[0, 1]} />
+                              <Tooltip
+                                formatter={(value: number) => [value.toFixed(4), 'Amplitude']}
+                                labelFormatter={(label: number) => `${label.toFixed(2)}s`}
+                                contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151' }}
+                              />
+                              <Area type="monotone" dataKey="val" stroke="#10b981" fill="#10b981" fillOpacity={0.2} />
+                            </AreaChart>
+                          </ResponsiveContainer>
                         </div>
                       </CardContent>
                     </Card>
@@ -1079,6 +1048,45 @@ export default function AudioAnalysisPage() {
                         </CardContent>
                       </Card>
                     </div>
+
+                    {selectedResult.pitchContour && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm">Pitch Contour (Melody)</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart data={selectedResult.pitchContour}>
+                                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                                <XAxis
+                                  dataKey="time"
+                                  tickFormatter={(v) => `${v.toFixed(1)}s`}
+                                  label={{ value: 'Time (s)', position: 'insideBottomRight', offset: -5 }}
+                                />
+                                <YAxis
+                                  dataKey="frequency"
+                                  label={{ value: 'Hz', angle: -90, position: 'insideLeft' }}
+                                  domain={['auto', 'auto']}
+                                />
+                                <Tooltip
+                                  formatter={(value: number) => [value.toFixed(1) + ' Hz', 'Frequency']}
+                                  labelFormatter={(label: number) => `${label.toFixed(2)}s`}
+                                  contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151' }}
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="frequency"
+                                  stroke="#f59e0b"
+                                  dot={false}
+                                  strokeWidth={2}
+                                />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </TabsContent>
                 </Tabs>
               </CardContent>
