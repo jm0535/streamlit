@@ -214,7 +214,7 @@ export default function SettingsPage() {
 
   const handleSaveSettings = useCallback(async () => {
     setIsSaving(true);
-    
+
     // Simulate saving
     setTimeout(() => {
       setIsSaving(false);
@@ -289,7 +289,7 @@ export default function SettingsPage() {
         compression: false
       }
     });
-    
+
     setHasChanges(true);
     toast({
       title: "Settings reset",
@@ -362,60 +362,70 @@ export default function SettingsPage() {
                 <h2 className="form-section-title">Personal Information</h2>
                 <p className="form-section-description">Update your personal details and contact information</p>
               </div>
-              
+
               <div className="form-grid form-grid-2">
                 <div className="form-field">
                   <label htmlFor="name" className="form-label">Full Name</label>
                   <Input
                     id="name"
+                    name="name"
+                    autoComplete="name"
                     value={settings.profile.name}
                     onChange={(e) => updateSetting('profile', 'name', e.target.value)}
                     className="form-input"
                   />
                 </div>
-                
+
                 <div className="form-field">
                   <label htmlFor="email" className="form-label">Email Address</label>
                   <Input
                     id="email"
+                    name="email"
+                    autoComplete="email"
                     type="email"
                     value={settings.profile.email}
                     onChange={(e) => updateSetting('profile', 'email', e.target.value)}
                     className="form-input"
                   />
                 </div>
-                
+
                 <div className="form-field">
                   <label htmlFor="location" className="form-label">Location</label>
                   <Input
                     id="location"
+                    name="location"
+                    autoComplete="address-level2"
                     value={settings.profile.location}
                     onChange={(e) => updateSetting('profile', 'location', e.target.value)}
                     className="form-input"
                   />
                 </div>
-                
+
                 <div className="form-field">
                   <label htmlFor="website" className="form-label">Website</label>
                   <Input
                     id="website"
+                    name="website"
+                    autoComplete="url"
                     type="url"
                     value={settings.profile.website}
                     onChange={(e) => updateSetting('profile', 'website', e.target.value)}
                     className="form-input"
                   />
                 </div>
-                
+
                 <div className="form-field">
                   <label htmlFor="institution" className="form-label">Institution</label>
                   <Input
                     id="institution"
+                    name="institution"
+                    autoComplete="organization"
                     value={settings.profile.institution}
                     onChange={(e) => updateSetting('profile', 'institution', e.target.value)}
                     className="form-input"
                   />
                 </div>
-                
+
                 <div className="form-field">
                   <label htmlFor="timezone" className="form-label">Timezone</label>
                   <Select value={settings.profile.timezone} onValueChange={(value) => updateSetting('profile', 'timezone', value)}>
@@ -434,7 +444,7 @@ export default function SettingsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div className="form-field">
                   <label htmlFor="language" className="form-label">Language</label>
                   <Select value={settings.profile.language} onValueChange={(value) => updateSetting('profile', 'language', value)}>
@@ -452,7 +462,7 @@ export default function SettingsPage() {
                   </Select>
                 </div>
               </div>
-              
+
               <div className="form-field form-field-lg">
                 <label htmlFor="bio" className="form-label">Bio</label>
                 <Textarea
@@ -476,7 +486,7 @@ export default function SettingsPage() {
                 <h2 className="form-section-title">Notification Preferences</h2>
                 <p className="form-section-description">Choose how you want to receive notifications</p>
               </div>
-              
+
               <div className="form-field form-field-lg">
                 <h3 className="form-label">Delivery Methods</h3>
                 <div className="form-grid form-grid-3">
@@ -492,7 +502,7 @@ export default function SettingsPage() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="form-field">
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-1">
@@ -505,7 +515,7 @@ export default function SettingsPage() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="form-field">
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-1">
@@ -536,7 +546,7 @@ export default function SettingsPage() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="form-field">
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-1">
@@ -549,7 +559,7 @@ export default function SettingsPage() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="form-field">
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-1">
@@ -562,7 +572,7 @@ export default function SettingsPage() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="form-field">
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-1">
@@ -575,7 +585,7 @@ export default function SettingsPage() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="form-field">
                     <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="space-y-1">
