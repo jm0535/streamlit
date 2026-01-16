@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Music2, Mail, Lock, Chrome, Github, Loader2, ArrowLeft } from 'lucide-react';
+import { SoundWaveBackground } from '@/components/ui/sound-wave-background';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -85,36 +86,29 @@ export default function LoginPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" suppressHydrationWarning>
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 text-white hover:text-purple-300 transition-colors mb-4">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Home
-          </Link>
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 bg-purple-500/20 rounded-xl">
-              <Music2 className="h-10 w-10 text-purple-400" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-white">Welcome Back</h1>
-          <p className="text-slate-400 mt-2">Sign in to your research account</p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden">
+      <SoundWaveBackground className="text-primary/20" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-background to-background z-0" />
 
-        <Card className="border-slate-700 bg-slate-800/50 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-white">Sign In</CardTitle>
-            <CardDescription className="text-slate-400">
-              Enter your credentials to access your account
-            </CardDescription>
-          </CardHeader>
+      <Card className="w-full max-w-md relative z-10 border-primary/20 shadow-2xl backdrop-blur-sm bg-background/80">
+        <CardHeader className="space-y-1 text-center">
+          <div className="flex justify-center mb-4">
+            <Link href="/" className="p-3 rounded-full bg-primary/10 ring-1 ring-primary/20 hover:bg-primary/20 transition-colors">
+              <Music2 className="h-8 w-8 text-primary" />
+            </Link>
+          </div>
+          <CardTitle className="text-2xl font-bold">Audio Research Platform</CardTitle>
+          <CardDescription>
+            Sign in to access your projects
+          </CardDescription>
+        </CardHeader>
           <CardContent className="space-y-4">
             <form onSubmit={handleEmailLogin} className="space-y-4">
               <div className="space-y-2">
@@ -127,6 +121,7 @@ export default function LoginPage() {
                     placeholder="researcher@university.edu"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
                     className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                   />
                 </div>
@@ -146,6 +141,7 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
                     className="pl-10 bg-slate-700 border-slate-600 text-white"
                   />
                 </div>
@@ -166,33 +162,7 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-slate-600" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-slate-800 px-2 text-slate-400">Or continue with</span>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Button
-                variant="outline"
-                onClick={handleGoogleLogin}
-                className="border-slate-600 bg-slate-700 text-white hover:bg-slate-600"
-              >
-                <Chrome className="h-4 w-4 mr-2" />
-                Google
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleGitHubLogin}
-                className="border-slate-600 bg-slate-700 text-white hover:bg-slate-600"
-              >
-                <Github className="h-4 w-4 mr-2" />
-                GitHub
-              </Button>
-            </div>
           </CardContent>
           <CardFooter className="flex justify-center">
             <p className="text-slate-400 text-sm">
@@ -202,8 +172,7 @@ export default function LoginPage() {
               </Link>
             </p>
           </CardFooter>
-        </Card>
-      </div>
+      </Card>
     </div>
   );
 }

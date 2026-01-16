@@ -209,33 +209,7 @@ export default function SignUpPage() {
               </Button>
             </form>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-slate-600" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-slate-800 px-2 text-slate-400">Or continue with</span>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Button
-                variant="outline"
-                onClick={handleGoogleSignUp}
-                className="border-slate-600 bg-slate-700 text-white hover:bg-slate-600"
-              >
-                <Chrome className="h-4 w-4 mr-2" />
-                Google
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleGitHubSignUp}
-                className="border-slate-600 bg-slate-700 text-white hover:bg-slate-600"
-              >
-                <Github className="h-4 w-4 mr-2" />
-                GitHub
-              </Button>
-            </div>
           </CardContent>
           <CardFooter className="flex justify-center">
             <p className="text-slate-400 text-sm">

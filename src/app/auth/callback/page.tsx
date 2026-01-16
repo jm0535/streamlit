@@ -9,31 +9,36 @@ export default function AuthCallbackPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const handleCallback = async () => {
-      try {
-        // Get the session from the URL hash
-        const { data: { session }, error } = await supabase.auth.getSession();
-
-        if (error) {
-          console.error('Auth callback error:', error);
-          router.push('/auth/login?error=callback_failed');
-          return;
-        }
-
-        if (session) {
-          // Successfully authenticated, redirect to dashboard
-          router.push('/dashboard');
-        } else {
-          // No session found, redirect to login
-          router.push('/auth/login');
-        }
-      } catch (error) {
-        console.error('Callback error:', error);
-        router.push('/auth/login?error=callback_failed');
+    // Check if we have a session immediately
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.push('/dashboard');
       }
-    };
+    });
 
-    handleCallback();
+    // Listen for the auth state change (handling the code exchange)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        router.push('/dashboard');
+      } else if (event === 'SIGNED_OUT') {
+        // Optional: Handle explicit sign out or failure case if needed
+        // but typically we just wait for the signed_in event on this page
+      }
+    });
+
+    // Fallback: If nothing happens after a timeout (e.g. 5s), redirect to login
+    const timeout = setTimeout(() => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!session) {
+           router.push('/auth/login?error=timeout');
+        }
+      });
+    }, 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, [router]);
 
   return (

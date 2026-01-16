@@ -338,7 +338,7 @@ BEGIN
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Trigger on auth.users insert
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
@@ -355,7 +355,7 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SET search_path = public;
 
 -- Apply updated_at triggers
 CREATE TRIGGER update_projects_updated_at

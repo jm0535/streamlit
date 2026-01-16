@@ -6,7 +6,7 @@ import "../styles/audio-components.css";
 import "../styles/forms.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
-import { AppLayout } from "@/components/enterprise-layout";
+import { ClientLayout } from "@/components/client-layout";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 const geistSans = Geist({
@@ -51,9 +51,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <AppLayout>
+            <ClientLayout>
               {children}
-            </AppLayout>
+            </ClientLayout>
             <Toaster />
           </AuthProvider>
         </ThemeProvider>
@@ -61,4 +61,3 @@ export default function RootLayout({
     </html>
   );
 }
-
