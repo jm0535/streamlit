@@ -17,11 +17,11 @@ A professional-grade audio transcription and mixing platform built for ethnomusi
 - **🌈 Beautiful UI** - Modern design with shadcn/ui components
 - **🎯 Real-time Visualization** - Audio waveforms and frequency analysis
 
-### 🔬 Research Tools
-- **📝 Research Metadata** - Ethnomusicological data collection
-- **🎵 Instrument Detection** - AI-powered instrument identification
-- **📊 Statistical Analysis** - Comprehensive audio analysis tools
-- **💾 Export Options** - MIDI, CSV, ZIP formats for research
+### 🔐 Authentication & Collaboration
+- **👥 Enterprise Auth** - Complete login/signup flows via Supabase
+- **🤝 Team Collaboration** - Invite members and manage roles (Viewer/Editor/Admin)
+- **📫 Email System** - Professional branded email templates with Resend SMTP
+- **🛡️ Role-Based Access** - Granular permissions for project resources
 
 ## 🚀 Quick Start
 
@@ -29,14 +29,12 @@ A professional-grade audio transcription and mixing platform built for ethnomusi
 # Install dependencies
 npm install
 
+# Setup Environment (.env.local)
+NEXT_PUBLIC_SUPABASE_URL=your_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
+
 # Start development server
 npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to see your application running.
@@ -57,6 +55,12 @@ Experience the professional audio mixer by visiting `/mixer-demo`:
 - **⚡ Next.js 15** - React framework with App Router
 - **📘 TypeScript 5** - Type-safe development
 - **🎨 Tailwind CSS 4** - Modern utility-first styling
+
+### 🔥 Backend & Database
+- **⚡ Supabase** - Open source Firebase alternative
+- **🐘 PostgreSQL** - Robust relational database
+- **🔐 Auth** - Enterprise-grade authentication
+- **📨 Resend** - Reliable SMTP email delivery
 
 ### 🎵 Audio Processing
 - **🎵 Web Audio API** - Low-latency audio processing
@@ -81,14 +85,17 @@ Experience the professional audio mixer by visiting `/mixer-demo`:
 ```
 src/
 ├── app/                    # Next.js App Router pages
+│   ├── auth/              # Authentication pages (login, signup, etc.)
 │   ├── mixer-demo/        # Professional audio mixer demo
 │   ├── stem-demo/         # Stem separation features
 │   └── page.tsx          # Main transcription interface
 ├── components/            # Reusable React components
 │   ├── audio-mixer.tsx   # Professional mixing console
-│   ├── StemSeparationViewer.tsx # Stem separation UI
+│   ├── enterprise-layout.tsx # App shell with auth context
+│   ├── collaboration.tsx # Team management UI
 │   └── ui/               # shadcn/ui components
 ├── lib/                   # Audio processing utilities
+│   ├── supabase.ts       # Database client & auth logic
 │   ├── audio-analysis.ts # Core audio analysis algorithms
 │   ├── audio-processor.ts # Audio file processing
 │   ├── stem-separation.ts # Instrument separation
@@ -153,7 +160,6 @@ const analyserNode = audioContext.createAnalyser();
 
 ## 📚 Documentation
 
-- **[Mixer Implementation Guide](./MIXER_IMPLEMENTATION_GUIDE.md)** - Complete audio mixer documentation
 - **[Stem Separation Guide](./STEM_SEPARATION_GUIDE.md)** - Instrument separation features
 - **[Processing Settings Guide](./PROCESSING_SETTINGS_GUIDE.md)** - Audio processing configuration
 - **[Music Disciplines Guide](./MUSIC_DISCIPLINES_GUIDE.md)** - Research applications
