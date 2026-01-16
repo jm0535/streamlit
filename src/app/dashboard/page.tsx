@@ -28,6 +28,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { AudioFileUpload } from '@/components/audio-file-upload';
 
+import { preloadAudioAssets } from '@/lib/audio-playback';
+
 export default function Dashboard() {
   const { toast } = useToast();
   const router = useRouter();
@@ -37,6 +39,11 @@ export default function Dashboard() {
 
   // Zustand store for persisting files
   const { addFiles } = useFileStore();
+
+  useEffect(() => {
+    // Preload audio assets for instant playback experience later
+    preloadAudioAssets();
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {

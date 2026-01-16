@@ -24,7 +24,12 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { playNotes as playNotesWithTone, playNote as playNoteWithTone, stopPlayback, initializeAudio } from '@/lib/audio-playback';
-import { ScoreView } from '@/components/score-view';
+import dynamic from 'next/dynamic';
+
+const ScoreView = dynamic(() => import('@/components/score-view').then(mod => mod.ScoreView), {
+  loading: () => <div className="flex items-center justify-center h-48 bg-gray-50 text-gray-400">Loading Notation Engine...</div>,
+  ssr: false
+});
 
 // MIDI note number to note name
 const MIDI_NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];

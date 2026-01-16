@@ -157,11 +157,14 @@ export async function playNotes(
   let player: Tone.Sampler | Tone.PolySynth;
 
   if (instrument === 'piano') {
-    try {
-      player = await loadPianoSampler();
-    } catch {
-      console.warn('Using synth fallback');
+    // Optimistic playback: Use piano if ready, else use synth immediately
+    if (pianoSampler) {
+      player = pianoSampler;
+    } else {
+      console.log('Piano not ready, utilizing Synth for instant playback');
       player = getSynth();
+      // Trigger background load
+      loadPianoSampler().catch(console.error);
     }
   } else {
     player = getSynth();
@@ -302,5 +305,16 @@ export function disposeAudio(): void {
   if (synthInstance) {
     synthInstance.dispose();
     synthInstance = null;
+  }
+}
+
+/**
+ * Preload high-quality assets in the background
+ */
+export function preloadAudioAssets(): void {
+  // Start loading piano samples if not already loaded
+  if (!pianoSampler && !isLoading) {
+    console.log('Preloading audio assets...');
+    loadPianoSampler().catch(err => console.warn('Background loading failed:', err));
   }
 }
