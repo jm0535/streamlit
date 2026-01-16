@@ -39,6 +39,17 @@ import { Progress } from '@/components/ui/progress';
 import { AudioFileUpload } from '@/components/audio-file-upload';
 import { AudioVisualizer } from '@/components/audio-visualizer';
 import { MetadataForm, Metadata } from '@/components/metadata-form';
+import { PitchAnalysis } from '@/components/pitch-analysis';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface TranscriptionResult {
   id: string;
@@ -238,10 +249,84 @@ export default function TranscriptionPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline">
-            <Settings className="h-4 w-4 mr-2" />
-            Advanced Settings
-          </Button>
+          {/* Settings Dialog */}
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Settings className="h-4 w-4 mr-2" />
+                Advanced Settings
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Processing Settings</DialogTitle>
+                <DialogDescription>
+                  Configure how audio files are transcribed
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Sensitivity: {Math.round(processingSettings.sensitivity * 100)}%</Label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={processingSettings.sensitivity * 100}
+                    onChange={(e) => updateSetting('sensitivity', parseInt(e.target.value) / 100)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Min Note Duration: {processingSettings.minNoteDuration * 1000}ms</Label>
+                  <input
+                    type="range"
+                    min="50"
+                    max="500"
+                    step="50"
+                    value={processingSettings.minNoteDuration * 1000}
+                    onChange={(e) => updateSetting('minNoteDuration', parseInt(e.target.value) / 1000)}
+                    className="w-full"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Tempo Detection</Label>
+                  <Switch
+                    checked={processingSettings.tempoDetection}
+                    onCheckedChange={(checked) => updateSetting('tempoDetection', checked)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Key Detection</Label>
+                  <Switch
+                    checked={processingSettings.keyDetection}
+                    onCheckedChange={(checked) => updateSetting('keyDetection', checked)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Instrument Detection</Label>
+                  <Switch
+                    checked={processingSettings.instrumentDetection}
+                    onCheckedChange={(checked) => updateSetting('instrumentDetection', checked)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Noise Reduction</Label>
+                  <Switch
+                    checked={processingSettings.noiseReduction}
+                    onCheckedChange={(checked) => updateSetting('noiseReduction', checked)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Pitch Bend Detection</Label>
+                  <Switch
+                    checked={processingSettings.pitchBend}
+                    onCheckedChange={(checked) => updateSetting('pitchBend', checked)}
+                  />
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+
           <Button
             onClick={startTranscription}
             disabled={isProcessing || uploadedFiles.length === 0}
@@ -452,6 +537,21 @@ export default function TranscriptionPage() {
           )}
         </div>
       </div>
+
+      {/* Pitch Analysis Visualization */}
+      {selectedResult && selectedResult.notes.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-xl font-semibold mb-4">Pitch Analysis</h2>
+          <PitchAnalysis
+            notes={selectedResult.notes.map(note => ({
+              pitch: note.pitch,
+              startTime: note.startTime,
+              duration: note.duration,
+              velocity: note.velocity,
+            }))}
+          />
+        </div>
+      )}
 
       {/* Progress Bar */}
       {isProcessing && (

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useFileStore } from "@/lib/file-store";
 import {
   Upload,
   Play,
@@ -92,6 +93,9 @@ export default function BatchProcessingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
 
+  // Get pending files from file store (set by Dashboard)
+  const { pendingFiles, clearPendingFiles } = useFileStore();
+
   const [batchSettings, setBatchSettings] = useState<BatchSettings>({
     maxConcurrent: 3,
     outputFormat: "both",
@@ -102,6 +106,29 @@ export default function BatchProcessingPage() {
     autoExport: false,
     organizeByFolder: true,
   });
+
+  // Load files from store on mount (when navigating from Dashboard)
+  useEffect(() => {
+    if (pendingFiles.length > 0) {
+      const newBatchFiles: BatchFile[] = pendingFiles.map((file) => ({
+        id: Math.random().toString(36).substr(2, 9),
+        file,
+        name: file.name,
+        size: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        status: "pending" as const,
+        progress: 0,
+        selected: true,
+      }));
+
+      setBatchFiles((prev) => [...prev, ...newBatchFiles]);
+      clearPendingFiles();
+
+      toast({
+        title: 'Files loaded from dashboard',
+        description: `${pendingFiles.length} file(s) added to batch queue`,
+      });
+    }
+  }, [pendingFiles, clearPendingFiles, toast]);
 
   const handleFileUpload = useCallback(
     (files: File[]) => {

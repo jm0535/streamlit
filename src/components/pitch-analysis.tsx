@@ -1,11 +1,8 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Note } from '@/lib/midi-utils';
-import { analyzeNotes, AnalysisData } from '@/lib/music-export';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import {
   Music,
   BarChart3,
@@ -15,8 +12,87 @@ import {
   Piano,
 } from 'lucide-react';
 
+// Simplified note interface for external use
+interface SimpleNote {
+  pitch: number;
+  startTime: number;
+  duration: number;
+  velocity: number;
+}
+
 interface PitchAnalysisProps {
-  notes: Note[];
+  notes: SimpleNote[];
+}
+
+// Simple analysis function that works with SimpleNote
+function analyzeSimpleNotes(notes: SimpleNote[]) {
+  const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+  // Pitch histogram
+  const pitchHistogram: Record<string, number> = {};
+  NOTE_NAMES.forEach(name => pitchHistogram[name] = 0);
+
+  let minPitch = Infinity;
+  let maxPitch = -Infinity;
+  let totalDuration = 0;
+
+  notes.forEach(note => {
+    const noteName = NOTE_NAMES[note.pitch % 12];
+    pitchHistogram[noteName] = (pitchHistogram[noteName] || 0) + 1;
+    minPitch = Math.min(minPitch, note.pitch);
+    maxPitch = Math.max(maxPitch, note.pitch);
+    totalDuration += note.duration;
+  });
+
+  // Find tonal center (most frequent note)
+  let tonalCenter = 'C';
+  let maxCount = 0;
+  for (const [note, count] of Object.entries(pitchHistogram) as [string, number][]) {
+    if (count > maxCount) {
+      maxCount = count;
+      tonalCenter = note;
+    }
+  }
+
+  // Simple scale detection
+  const presentNotes = new Set(
+    Object.entries(pitchHistogram)
+      .filter(([, count]) => count > 0)
+      .map(([name]) => name)
+  );
+
+  const scales: Record<string, string[]> = {
+    'Major': ['C', 'D', 'E', 'F', 'G', 'A', 'B'],
+    'Minor': ['C', 'D', 'D#', 'F', 'G', 'G#', 'A#'],
+    'Pentatonic': ['C', 'D', 'E', 'G', 'A'],
+    'Blues': ['C', 'D#', 'F', 'F#', 'G', 'A#'],
+  };
+
+  let detectedScale = 'Unknown';
+  let bestMatch = 0;
+
+  for (const [scaleName, scaleNotes] of Object.entries(scales)) {
+    const tonicIndex = NOTE_NAMES.indexOf(tonalCenter);
+    const transposed = scaleNotes.map(note => {
+      const idx = (NOTE_NAMES.indexOf(note) + tonicIndex) % 12;
+      return NOTE_NAMES[idx];
+    });
+
+    const matches = [...presentNotes].filter(n => transposed.includes(n)).length;
+    if (matches > bestMatch) {
+      bestMatch = matches;
+      detectedScale = `${tonalCenter} ${scaleName}`;
+    }
+  }
+
+  return {
+    noteCount: notes.length,
+    pitchHistogram,
+    pitchRange: { min: minPitch === Infinity ? 0 : minPitch, max: maxPitch === -Infinity ? 127 : maxPitch },
+    durationTotal: totalDuration,
+    tonalCenter,
+    detectedScale,
+  };
 }
 
 const NOTE_COLORS: Record<string, string> = {
@@ -37,7 +113,7 @@ const NOTE_COLORS: Record<string, string> = {
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 export function PitchAnalysis({ notes }: PitchAnalysisProps) {
-  const analysis = useMemo(() => analyzeNotes(notes), [notes]);
+  const analysis = useMemo(() => analyzeSimpleNotes(notes), [notes]);
 
   // Calculate histogram percentages
   const histogramData = useMemo(() => {
