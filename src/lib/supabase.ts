@@ -3,6 +3,14 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
+
+const getRedirectUrl = (path: string) => {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+  // Remove trailing slash if present
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+  return `${cleanBaseUrl}${path}`;
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export interface AuthUser {
@@ -101,7 +109,7 @@ export const onAuthStateChange = (callback: (event: string, session: any) => voi
 // Password reset
 export const resetPassword = async (email: string) => {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${window.location.origin}/auth/reset-password`,
+    redirectTo: getRedirectUrl('/auth/reset-password'),
   })
   if (error) throw error
 }
@@ -118,7 +126,7 @@ export const signInWithGoogle = async () => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: getRedirectUrl('/auth/callback'),
     },
   })
   if (error) throw error
@@ -129,7 +137,7 @@ export const signInWithGitHub = async () => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'github',
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: getRedirectUrl('/auth/callback'),
     },
   })
   if (error) throw error
