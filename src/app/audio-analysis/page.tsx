@@ -49,6 +49,14 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { AudioFileUpload } from "@/components/audio-file-upload";
 import { AudioVisualizer } from "@/components/audio-visualizer";
 
@@ -346,10 +354,96 @@ export default function AudioAnalysisPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline">
-            <Settings className="h-4 w-4 mr-2" />
-            Analysis Settings
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Settings className="h-4 w-4 mr-2" />
+                Analysis Settings
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Analysis Settings</DialogTitle>
+                <DialogDescription>
+                  Configure advanced analysis parameters for frequency, temporal, and spectral analysis.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>FFT Size</Label>
+                    <select
+                      value={analysisSettings.fftSize}
+                      onChange={(e) =>
+                        setAnalysisSettings((prev) => ({
+                          ...prev,
+                          fftSize: parseInt(e.target.value),
+                        }))
+                      }
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value={256}>256 (Faster)</option>
+                      <option value={512}>512</option>
+                      <option value={1024}>1024</option>
+                      <option value={2048}>2048 (Recommended)</option>
+                      <option value={4096}>4096</option>
+                      <option value={8192}>8192 (High precision)</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Window Size: {analysisSettings.windowSize}</Label>
+                    <Slider
+                      value={[analysisSettings.windowSize]}
+                      onValueChange={([value]) =>
+                        setAnalysisSettings((prev) => ({ ...prev, windowSize: value }))
+                      }
+                      min={256}
+                      max={2048}
+                      step={256}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Overlap Ratio: {(analysisSettings.overlapRatio * 100).toFixed(0)}%</Label>
+                    <Slider
+                      value={[analysisSettings.overlapRatio]}
+                      onValueChange={([value]) =>
+                        setAnalysisSettings((prev) => ({ ...prev, overlapRatio: value }))
+                      }
+                      min={0}
+                      max={0.9}
+                      step={0.1}
+                    />
+                  </div>
+                </div>
+                <div className="border-t pt-4 space-y-3">
+                  <Label className="font-semibold">Analysis Modules</Label>
+                  {[
+                    { key: "enableFrequencyAnalysis", label: "Frequency Analysis" },
+                    { key: "enableTemporalAnalysis", label: "Temporal Analysis" },
+                    { key: "enableMusicalAnalysis", label: "Musical Analysis" },
+                    { key: "enableHarmonicAnalysis", label: "Harmonic Analysis" },
+                    { key: "enableSpectralAnalysis", label: "Spectral Analysis" },
+                    { key: "enableInstrumentDetection", label: "Instrument Detection" },
+                    { key: "enableQualityMetrics", label: "Quality Metrics" },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center justify-between">
+                      <Label className="font-normal">{label}</Label>
+                      <Switch
+                        checked={
+                          typeof analysisSettings[key as keyof AnalysisSettings] === "boolean"
+                            ? (analysisSettings[key as keyof AnalysisSettings] as boolean)
+                            : false
+                        }
+                        onCheckedChange={(checked) =>
+                          setAnalysisSettings((prev) => ({ ...prev, [key]: checked }))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button
             onClick={startAnalysis}
             disabled={isAnalyzing || uploadedFiles.length === 0}

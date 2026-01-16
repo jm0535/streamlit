@@ -46,6 +46,14 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { AudioFileUpload } from "@/components/audio-file-upload";
 import { AudioVisualizer } from "@/components/audio-visualizer";
 import StemSeparationViewer from "@/components/StemSeparationViewer";
@@ -350,10 +358,104 @@ export default function StemSeparationPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline">
-            <Settings className="h-4 w-4 mr-2" />
-            Advanced Settings
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Settings className="h-4 w-4 mr-2" />
+                Advanced Settings
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Advanced Separation Settings</DialogTitle>
+                <DialogDescription>
+                  Configure stem separation parameters for optimal results.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Algorithm</Label>
+                  <select
+                    value={separationSettings.algorithm}
+                    onChange={(e) =>
+                      setSeparationSettings((prev) => ({
+                        ...prev,
+                        algorithm: e.target.value as "frequency" | "ml" | "hybrid",
+                      }))
+                    }
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="frequency">Frequency-Based</option>
+                    <option value="ml">Machine Learning</option>
+                    <option value="hybrid">Hybrid (Best Quality)</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Quality</Label>
+                  <select
+                    value={separationSettings.quality}
+                    onChange={(e) =>
+                      setSeparationSettings((prev) => ({
+                        ...prev,
+                        quality: e.target.value as "low" | "medium" | "high",
+                      }))
+                    }
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="low">Low (Faster)</option>
+                    <option value="medium">Medium (Balanced)</option>
+                    <option value="high">High (Best Quality)</option>
+                  </select>
+                </div>
+                <div className="border-t pt-4 space-y-3">
+                  <Label className="font-semibold">Processing Options</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="font-normal">Preserve Stereo</Label>
+                    <Switch
+                      checked={separationSettings.preserveStereo}
+                      onCheckedChange={(checked) =>
+                        setSeparationSettings((prev) => ({ ...prev, preserveStereo: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="font-normal">Noise Reduction</Label>
+                    <Switch
+                      checked={separationSettings.noiseReduction}
+                      onCheckedChange={(checked) =>
+                        setSeparationSettings((prev) => ({ ...prev, noiseReduction: checked }))
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="border-t pt-4 space-y-3">
+                  <Label className="font-semibold">Stems to Extract</Label>
+                  {[
+                    { key: "enableBass", label: "Bass" },
+                    { key: "enableDrums", label: "Drums" },
+                    { key: "enableGuitar", label: "Guitar" },
+                    { key: "enableVocals", label: "Vocals" },
+                    { key: "enablePiano", label: "Piano" },
+                    { key: "enableOther", label: "Other" },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center justify-between">
+                      <Label className="font-normal">{label}</Label>
+                      <Switch
+                        checked={
+                          typeof separationSettings[key as keyof typeof separationSettings] === "boolean"
+                            ? (separationSettings[key as keyof typeof separationSettings] as boolean)
+                            : false
+                        }
+                        onCheckedChange={(checked) =>
+                          setSeparationSettings((prev) => ({ ...prev, [key]: checked }))
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button
             onClick={startSeparation}
             disabled={isProcessing || uploadedFiles.length === 0}

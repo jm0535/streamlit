@@ -53,6 +53,16 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AudioFileUpload } from "@/components/audio-file-upload";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface BatchFile {
   id: string;
@@ -334,10 +344,125 @@ export default function BatchProcessingPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline">
-            <Settings className="h-4 w-4 mr-2" />
-            Batch Settings
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Settings className="h-4 w-4 mr-2" />
+                Batch Settings
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Batch Processing Settings</DialogTitle>
+                <DialogDescription>
+                  Configure batch processing parameters for optimal workflow.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Max Concurrent Jobs</Label>
+                  <select
+                    value={batchSettings.maxConcurrent}
+                    onChange={(e) =>
+                      setBatchSettings((prev) => ({
+                        ...prev,
+                        maxConcurrent: parseInt(e.target.value),
+                      }))
+                    }
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value={1}>1 (Sequential)</option>
+                    <option value={2}>2</option>
+                    <option value={3}>3 (Recommended)</option>
+                    <option value={4}>4</option>
+                    <option value={5}>5</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Output Format</Label>
+                  <select
+                    value={batchSettings.outputFormat}
+                    onChange={(e) =>
+                      setBatchSettings((prev) => ({
+                        ...prev,
+                        outputFormat: e.target.value as "mid" | "csv" | "both",
+                      }))
+                    }
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="mid">MIDI Only</option>
+                    <option value="csv">CSV Only</option>
+                    <option value="both">Both MIDI & CSV</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Processing Quality</Label>
+                  <select
+                    value={batchSettings.quality}
+                    onChange={(e) =>
+                      setBatchSettings((prev) => ({
+                        ...prev,
+                        quality: e.target.value as "fast" | "balanced" | "high",
+                      }))
+                    }
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="fast">Fast (Lower quality)</option>
+                    <option value="balanced">Balanced</option>
+                    <option value="high">High (Slower)</option>
+                  </select>
+                </div>
+                <div className="border-t pt-4 space-y-3">
+                  <Label className="font-semibold">Processing Options</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="font-normal">Enable Transcription</Label>
+                    <Switch
+                      checked={batchSettings.enableTranscription}
+                      onCheckedChange={(checked) =>
+                        setBatchSettings((prev) => ({ ...prev, enableTranscription: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="font-normal">Enable Stem Separation</Label>
+                    <Switch
+                      checked={batchSettings.enableStemSeparation}
+                      onCheckedChange={(checked) =>
+                        setBatchSettings((prev) => ({ ...prev, enableStemSeparation: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="font-normal">Enable Analysis</Label>
+                    <Switch
+                      checked={batchSettings.enableAnalysis}
+                      onCheckedChange={(checked) =>
+                        setBatchSettings((prev) => ({ ...prev, enableAnalysis: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="font-normal">Auto Export</Label>
+                    <Switch
+                      checked={batchSettings.autoExport}
+                      onCheckedChange={(checked) =>
+                        setBatchSettings((prev) => ({ ...prev, autoExport: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label className="font-normal">Organize by Folder</Label>
+                    <Switch
+                      checked={batchSettings.organizeByFolder}
+                      onCheckedChange={(checked) =>
+                        setBatchSettings((prev) => ({ ...prev, organizeByFolder: checked }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Button
             onClick={isProcessing ? stopBatchProcessing : startBatchProcessing}
             disabled={!isProcessing && stats.selected === 0}
