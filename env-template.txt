@@ -1,17 +1,9 @@
-# App Configuration
-NEXT_PUBLIC_APP_URL=https://streamlit.in4metrix.dev
-NEXT_PUBLIC_APP_NAME=Streamlit Audio Processing
-NEXT_PUBLIC_APP_VERSION=1.0.0
+# Environment Variables Template for Streamlit
+# Copy this file to .env.local and fill in your values
 
-# Supabase Configuration (Authentication only - no user data stored)
+# Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 
-# Vercel Configuration
-VERCEL_ORG_ID=your_vercel_org_id
-VERCEL_PROJECT_ID=your_vercel_project_id
-VERCEL_TOKEN=your_vercel_token
-
-# Development (only for local development)
-NODE_ENV=development
+# App Configuration
+NEXT_PUBLIC_APP_URL=https://streamlit.in4metrix.dev
