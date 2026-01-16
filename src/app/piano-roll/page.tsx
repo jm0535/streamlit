@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useFileStore } from '@/lib/file-store';
 import { PianoRoll } from '@/components/piano-roll';
 import { AudioFileUpload } from '@/components/audio-file-upload';
 import { Note, createMIDI, downloadMIDIFromNotes } from '@/lib/midi-utils';
@@ -36,6 +37,40 @@ export default function PianoRollPage() {
   const [duration, setDuration] = useState(30);
   const [tempo, setTempo] = useState(120);
   const [fileName, setFileName] = useState<string>('');
+
+  // Get notes from file store (sent from Transcription page)
+  const { pianoRollNotes, clearPianoRollNotes, hasPendingPianoRollNotes } = useFileStore();
+
+  // Load notes from store on mount (when navigating from Transcription page)
+  useEffect(() => {
+    if (hasPendingPianoRollNotes && pianoRollNotes.length > 0) {
+      // Convert to Note type expected by PianoRoll component
+      const convertedNotes: Note[] = pianoRollNotes.map(n => ({
+        midi: n.midi,
+        name: n.name,
+        octave: n.octave,
+        frequency: n.frequency,
+        startTime: n.startTime,
+        duration: n.duration,
+        velocity: n.velocity,
+        confidence: n.confidence,
+      }));
+
+      setNotes(convertedNotes);
+      setFileName('Transcription Results');
+
+      // Calculate duration based on notes
+      const maxTime = Math.max(...convertedNotes.map(n => n.startTime + n.duration));
+      setDuration(Math.ceil(maxTime) + 5);
+
+      clearPianoRollNotes();
+
+      toast({
+        title: 'Notes loaded from transcription',
+        description: `${convertedNotes.length} notes ready for editing`,
+      });
+    }
+  }, [hasPendingPianoRollNotes, pianoRollNotes, clearPianoRollNotes, toast]);
 
   // Demo notes for empty state
   const demoNotes: Note[] = [

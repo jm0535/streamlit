@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useFileStore } from '@/lib/file-store';
+import { useFileStore, convertToSharedNotes } from '@/lib/file-store';
 import {
   Mic,
   Play,
@@ -84,6 +85,7 @@ interface ProcessingSettings {
 
 export default function TranscriptionPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<TranscriptionResult[]>([]);
@@ -93,8 +95,8 @@ export default function TranscriptionPage() {
   const [playbackProgress, setPlaybackProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  // Get pending files from file store (set by Dashboard)
-  const { pendingFiles, clearPendingFiles } = useFileStore();
+  // Get pending files and piano roll functions from file store
+  const { pendingFiles, clearPendingFiles, setPianoRollNotes } = useFileStore();
 
   const [processingSettings, setProcessingSettings] = useState<ProcessingSettings>({
     sensitivity: 0.7,
@@ -531,6 +533,23 @@ export default function TranscriptionPage() {
                       CSV
                     </Button>
                   </div>
+                  <Button
+                    onClick={() => {
+                      // Convert notes to shared format and navigate to piano roll
+                      const sharedNotes = convertToSharedNotes(selectedResult.notes);
+                      setPianoRollNotes(sharedNotes);
+                      toast({
+                        title: 'Opening Piano Roll...',
+                        description: `Sending ${selectedResult.notes.length} notes to editor`,
+                      });
+                      router.push('/piano-roll');
+                    }}
+                    variant="default"
+                    className="w-full mt-2"
+                  >
+                    <Piano className="h-4 w-4 mr-2" />
+                    View in Piano Roll
+                  </Button>
                 </div>
               </div>
             </div>
