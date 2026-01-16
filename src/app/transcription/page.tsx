@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useFileStore } from '@/lib/file-store';
 import {
   Mic,
   Play,
@@ -38,8 +39,6 @@ import { Progress } from '@/components/ui/progress';
 import { AudioFileUpload } from '@/components/audio-file-upload';
 import { AudioVisualizer } from '@/components/audio-visualizer';
 import { MetadataForm, Metadata } from '@/components/metadata-form';
-// import { MusicologyMetadataForm } from '@/components/musicology-metadata-form';
-// import { DEFAULT_HISTORICAL, DisciplineConfig } from '@/lib/musicology-metadata';
 
 interface TranscriptionResult {
   id: string;
@@ -79,14 +78,13 @@ export default function TranscriptionPage() {
   const [results, setResults] = useState<TranscriptionResult[]>([]);
   const [selectedResult, setSelectedResult] = useState<TranscriptionResult | null>(null);
   const [currentMetadata, setCurrentMetadata] = useState<Metadata>({});
-  // const [musicologyConfig, setMusicologyConfig] = useState({
-  //   discipline: 'historical' as const,
-  //   historical: DEFAULT_HISTORICAL,
-  // });
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackProgress, setPlaybackProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
-  
+
+  // Get pending files from file store (set by Dashboard)
+  const { pendingFiles, clearPendingFiles } = useFileStore();
+
   const [processingSettings, setProcessingSettings] = useState<ProcessingSettings>({
     sensitivity: 0.7,
     minNoteDuration: 0.1,
@@ -97,6 +95,18 @@ export default function TranscriptionPage() {
     pitchBend: true,
     velocitySensitivity: 0.8
   });
+
+  // Load files from store on mount (when navigating from Dashboard)
+  useEffect(() => {
+    if (pendingFiles.length > 0) {
+      setUploadedFiles(pendingFiles);
+      clearPendingFiles();
+      toast({
+        title: 'Files loaded',
+        description: `${pendingFiles.length} file(s) ready for transcription`,
+      });
+    }
+  }, [pendingFiles, clearPendingFiles, toast]);
 
   const handleFileUpload = useCallback((files: File[]) => {
     setUploadedFiles(files);
@@ -119,15 +129,15 @@ export default function TranscriptionPage() {
     }
 
     setIsProcessing(true);
-    
+
     try {
       // Simulate processing for each file
       const newResults: TranscriptionResult[] = [];
-      
+
       for (const file of uploadedFiles) {
         // Simulate processing time
         await new Promise(resolve => setTimeout(resolve, 2000));
-        
+
         const mockResult: TranscriptionResult = {
           id: Math.random().toString(36).substr(2, 9),
           fileName: file.name,
@@ -147,13 +157,13 @@ export default function TranscriptionPage() {
           timeSignature: ['4/4', '3/4', '6/8'][Math.floor(Math.random() * 3)],
           processingTime: Math.random() * 5 + 2
         };
-        
+
         newResults.push(mockResult);
       }
-      
+
       setResults(newResults);
       setSelectedResult(newResults[0]);
-      
+
       toast({
         title: "Transcription complete",
         description: `Successfully processed ${newResults.length} file(s)`,
@@ -178,7 +188,7 @@ export default function TranscriptionPage() {
     a.download = `${result.fileName.replace(/\.[^/.]+$/, '')}.mid`;
     a.click();
     URL.revokeObjectURL(url);
-    
+
     toast({
       title: "MIDI exported",
       description: `Exported ${result.fileName} as MIDI file`,
@@ -188,11 +198,11 @@ export default function TranscriptionPage() {
   const exportCSV = useCallback((result: TranscriptionResult) => {
     const csv = [
       'Pitch,Start Time,Duration,Velocity,Confidence',
-      ...result.notes.map(note => 
+      ...result.notes.map(note =>
         `${note.pitch},${note.startTime},${note.duration},${note.velocity},${note.confidence}`
       )
     ].join('\n');
-    
+
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -200,7 +210,7 @@ export default function TranscriptionPage() {
     a.download = `${result.fileName.replace(/\.[^/.]+$/, '')}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    
+
     toast({
       title: "CSV exported",
       description: `Exported ${result.fileName} as CSV file`,
@@ -232,7 +242,7 @@ export default function TranscriptionPage() {
             <Settings className="h-4 w-4 mr-2" />
             Advanced Settings
           </Button>
-          <Button 
+          <Button
             onClick={startTranscription}
             disabled={isProcessing || uploadedFiles.length === 0}
           >
@@ -265,7 +275,7 @@ export default function TranscriptionPage() {
                 <p className="form-section-description">Supported formats: MP3, WAV, FLAC, M4A, OGG</p>
               </div>
               <div className="form-field form-field-lg">
-                <AudioFileUpload 
+                <AudioFileUpload
                   files={uploadedFiles}
                   onFilesChange={handleFileUpload}
                   maxFiles={10}
@@ -299,7 +309,7 @@ export default function TranscriptionPage() {
                   />
                   <p className="form-helper-text">{Math.round(processingSettings.sensitivity * 100)}%</p>
                 </div>
-                
+
                 <div className="form-field">
                   <label htmlFor="duration-slider" className="form-label">Minimum Note Duration</label>
                   <input
@@ -345,8 +355,8 @@ export default function TranscriptionPage() {
                       <div
                         key={result.id}
                         className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                          selectedResult?.id === result.id 
-                            ? 'border-primary bg-primary/5' 
+                          selectedResult?.id === result.id
+                            ? 'border-primary bg-primary/5'
                             : 'hover:bg-muted'
                         }`}
                         onClick={() => setSelectedResult(result)}
@@ -419,7 +429,7 @@ export default function TranscriptionPage() {
                   </div>
 
                   <div className="form-actions">
-                    <Button 
+                    <Button
                       onClick={() => exportMIDI(selectedResult)}
                       variant="outline"
                       className="flex-1"
@@ -427,7 +437,7 @@ export default function TranscriptionPage() {
                       <Download className="h-4 w-4 mr-2" />
                       MIDI
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => exportCSV(selectedResult)}
                       variant="outline"
                       className="flex-1"

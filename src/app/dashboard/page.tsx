@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { useFileStore } from '@/lib/file-store';
 import {
   Mic,
   FileAudio,
@@ -14,23 +15,26 @@ import {
   ArrowRight,
   Shield,
   Clock,
-  TrendingUp,
   Upload,
   PlayCircle,
   FolderOpen,
   Zap,
+  Loader2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { AudioFileUpload } from '@/components/audio-file-upload';
 
 export default function Dashboard() {
   const { toast } = useToast();
   const router = useRouter();
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  // Zustand store for persisting files
+  const { setPendingFiles } = useFileStore();
 
   // Simulated recent files (in real app, would come from IndexedDB or local storage)
   const recentFiles = [
@@ -51,13 +55,24 @@ export default function Dashboard() {
     if (files.length > 0) {
       toast({
         title: 'Files ready',
-        description: `${files.length} file(s) selected`,
+        description: `${files.length} file(s) selected. Click "Transcribe" to analyze.`,
       });
     }
   };
 
   const handleQuickTranscribe = () => {
     if (uploadedFiles.length > 0) {
+      setIsNavigating(true);
+
+      // Store files in Zustand store (persists across navigation)
+      setPendingFiles(uploadedFiles);
+
+      toast({
+        title: 'Starting transcription...',
+        description: `Processing ${uploadedFiles.length} file(s)`,
+      });
+
+      // Navigate to transcription page
       router.push('/transcription');
     } else {
       toast({
@@ -65,6 +80,15 @@ export default function Dashboard() {
         description: 'Please upload audio files first',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleBatchProcess = () => {
+    if (uploadedFiles.length > 0) {
+      setPendingFiles(uploadedFiles);
+      router.push('/batch-processing');
+    } else {
+      router.push('/batch-processing');
     }
   };
 
@@ -102,15 +126,44 @@ export default function Dashboard() {
             maxFiles={10}
           />
           {uploadedFiles.length > 0 && (
-            <div className="flex gap-3">
-              <Button onClick={handleQuickTranscribe} className="flex-1">
-                <PlayCircle className="h-4 w-4 mr-2" />
-                Transcribe {uploadedFiles.length} file(s)
-              </Button>
-              <Button variant="outline" onClick={() => router.push('/batch-processing')}>
-                <Package className="h-4 w-4 mr-2" />
-                Batch Process
-              </Button>
+            <div className="space-y-3">
+              {/* Selected Files Preview */}
+              <div className="bg-muted/50 rounded-lg p-3">
+                <p className="text-sm font-medium mb-2">
+                  Selected Files ({uploadedFiles.length})
+                </p>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {uploadedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm">
+                      <FileAudio className="h-4 w-4 text-muted-foreground" />
+                      <span className="truncate flex-1">{file.name}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {(file.size / (1024 * 1024)).toFixed(1)} MB
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button
+                  onClick={handleQuickTranscribe}
+                  className="flex-1"
+                  disabled={isNavigating}
+                >
+                  {isNavigating ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <PlayCircle className="h-4 w-4 mr-2" />
+                  )}
+                  Transcribe {uploadedFiles.length} file(s)
+                </Button>
+                <Button variant="outline" onClick={handleBatchProcess}>
+                  <Package className="h-4 w-4 mr-2" />
+                  Batch Process
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
