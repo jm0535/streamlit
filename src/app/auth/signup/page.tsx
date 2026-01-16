@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Music2, Mail, Lock, User, Chrome, Github, Loader2, ArrowLeft } from 'lucide-react';
+import { SoundWaveBackground } from '@/components/ui/sound-wave-background';
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -112,8 +113,10 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-background relative overflow-hidden p-4">
+      <SoundWaveBackground className="text-primary/20" />
+      <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-background to-background z-0" />
+      <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 text-white hover:text-purple-300 transition-colors mb-4">
             <ArrowLeft className="h-4 w-4" />
