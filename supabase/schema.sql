@@ -2,7 +2,6 @@
 -- This schema extends Supabase Auth with research-specific tables
 
 -- Enable RLS (Row Level Security)
-ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret';
 
 -- ============================================
 -- Projects Table
@@ -11,9 +10,9 @@ ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret';
 CREATE TABLE IF NOT EXISTS projects (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  name VARCHAR(255) NOT NULL,
+  name VARCHAR(256) NOT NULL,
   description TEXT,
-  status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'archived', 'completed')),
+  status VARCHAR(51) DEFAULT 'active' CHECK (status IN ('active', 'archived', 'completed')),
   tags TEXT[] DEFAULT '{}',
   settings JSONB DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -300,6 +299,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   full_name VARCHAR(255),
   avatar_url VARCHAR(500),
+  role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('user', 'admin')),
   institution VARCHAR(255),
   research_focus TEXT,
   bio TEXT,
@@ -326,11 +326,15 @@ CREATE POLICY "Public profiles are viewable" ON profiles
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, avatar_url)
+  INSERT INTO public.profiles (id, full_name, avatar_url, role)
   VALUES (
     NEW.id,
     NEW.raw_user_meta_data->>'full_name',
-    NEW.raw_user_meta_data->>'avatar_url'
+    NEW.raw_user_meta_data->>'avatar_url',
+    CASE
+      WHEN NEW.email = 'j.moses0131@gmail.com' THEN 'admin'
+      ELSE 'user'
+    END
   );
   RETURN NEW;
 END;
