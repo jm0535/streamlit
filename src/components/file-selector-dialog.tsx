@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useFileStore } from "@/lib/file-store";
+import { useState, useEffect, useMemo } from "react";
+import { useFileStore, sharedAudioFileToFile, SharedAudioFile } from "@/lib/file-store";
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { FileAudio, FolderOpen, Search, CheckCircle2 } from "lucide-react";
+import { FileAudio, FolderOpen, Search, CheckCircle2, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatFileSize } from "@/lib/utils";
 
@@ -24,6 +24,11 @@ interface FileSelectorDialogProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+interface DisplayFile {
+  file: File;
+  source: 'session' | 'persisted' | 'workspace';
+}
+
 export function FileSelectorDialog({
   onFilesSelected,
   trigger,
@@ -31,17 +36,55 @@ export function FileSelectorDialog({
   onOpenChange: controlledOnOpenChange
 }: FileSelectorDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
-  const { activeFiles, directoryHandle } = useFileStore();
+  const { activeFiles, sharedAudioFiles, directoryHandle } = useFileStore();
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [convertedSharedFiles, setConvertedSharedFiles] = useState<File[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
   const onOpenChange = isControlled ? controlledOnOpenChange : setInternalOpen;
 
-  const filteredFiles = activeFiles.map((file, index) => ({ file, index })).filter(({ file }) =>
-    file.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Convert sharedAudioFiles to File objects when dialog opens
+  useEffect(() => {
+    if (open && sharedAudioFiles.length > 0) {
+      setIsLoading(true);
+      const convertFiles = async () => {
+        const files: File[] = [];
+        for (const sharedFile of sharedAudioFiles) {
+          const file = await sharedAudioFileToFile(sharedFile);
+          if (file) files.push(file);
+        }
+        setConvertedSharedFiles(files);
+        setIsLoading(false);
+      };
+      convertFiles();
+    }
+  }, [open, sharedAudioFiles]);
+
+  // Merge active files with converted shared files, avoiding duplicates by name
+  const allFiles: DisplayFile[] = useMemo(() => {
+    const fileMap = new Map<string, DisplayFile>();
+
+    // Add active files first (session state takes priority)
+    activeFiles.forEach(file => {
+      fileMap.set(file.name, { file, source: directoryHandle ? 'workspace' : 'session' });
+    });
+
+    // Add converted shared files that aren't already in activeFiles
+    convertedSharedFiles.forEach(file => {
+      if (!fileMap.has(file.name)) {
+        fileMap.set(file.name, { file, source: 'persisted' });
+      }
+    });
+
+    return Array.from(fileMap.values());
+  }, [activeFiles, convertedSharedFiles, directoryHandle]);
+
+  const filteredFiles = allFiles
+    .map((item, index) => ({ ...item, index }))
+    .filter(({ file }) => file.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const toggleSelection = (index: number) => {
     const newCtx = new Set(selectedIndices);
@@ -54,8 +97,9 @@ export function FileSelectorDialog({
   };
 
   const handleConfirm = () => {
-    const selectedFiles = activeFiles.filter((_, i) => selectedIndices.has(i));
+    const selectedFiles = allFiles.filter((_, i) => selectedIndices.has(i)).map(item => item.file);
     onFilesSelected(selectedFiles);
+    setSelectedIndices(new Set());
     if (onOpenChange) onOpenChange(false);
   };
 
@@ -81,7 +125,12 @@ export function FileSelectorDialog({
         </div>
 
         <div className="flex-1 min-h-0 border rounded-md">
-          {activeFiles.length === 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin mb-4" />
+              <p>Loading library...</p>
+            </div>
+          ) : allFiles.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground p-4 text-center">
               <FolderOpen className="h-10 w-10 mb-4 opacity-50" />
               <p>No files in library</p>
@@ -90,7 +139,7 @@ export function FileSelectorDialog({
           ) : (
             <ScrollArea className="h-[300px]">
               <div className="p-2 space-y-1">
-                {filteredFiles.map(({ file, index }) => (
+                {filteredFiles.map(({ file, source, index }) => (
                   <div
                     key={index}
                     onClick={() => toggleSelection(index)}
@@ -109,7 +158,7 @@ export function FileSelectorDialog({
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{file.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {formatFileSize(file.size)} • {directoryHandle ? "Workspace" : "Uploaded"}
+                        {formatFileSize(file.size)} • {source === 'workspace' ? 'Workspace' : source === 'persisted' ? 'Saved' : 'Session'}
                       </p>
                     </div>
                   </div>
