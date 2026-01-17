@@ -29,8 +29,11 @@ import {
   Database,
   AlertCircle,
   CheckCircle,
-  Loader2
+  Loader2,
+  Layers,
 } from 'lucide-react';
+
+import { FileSelectorDialog } from '@/components/file-selector-dialog';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

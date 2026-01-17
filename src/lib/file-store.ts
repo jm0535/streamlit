@@ -188,14 +188,11 @@ export const useFileStore = create<FileStoreState>()(
         }
       },
 
+
       // ===== Active File objects (session memory, not persisted) =====
       activeFiles: [],
       setActiveFiles: (files) => set({ activeFiles: files }),
       clearActiveFiles: () => set({ activeFiles: [] }),
-
-      // ===== Local Folder State =====
-      directoryHandle: null,
-      localFiles: [],
 
       // ===== Processing state =====
       isProcessing: false,
