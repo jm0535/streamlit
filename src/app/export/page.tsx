@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Download,
@@ -40,8 +40,17 @@ import {
   FileSpreadsheet,
   FileJson,
   FileCode,
-  FileImage
+  FileImage,
+  Layers,
+  X,
+  Loader2,
 } from 'lucide-react';
+
+import { FileSelectorDialog } from '@/components/file-selector-dialog';
+import { useJobStore, useJobStoreHydrated, ProcessingJob, JobStatus } from '@/lib/job-store';
+import { runExportJob, quickDownloadTranscriptions, quickDownloadStems, quickDownloadAll } from '@/lib/export-service';
+import { loadTranscriptionResults } from '@/lib/transcription-store';
+import { loadStemResults } from '@/lib/stem-store';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,21 +63,6 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-
-interface ExportJob {
-  id: string;
-  name: string;
-  type: 'transcription' | 'stems' | 'analysis' | 'batch';
-  status: 'pending' | 'processing' | 'completed' | 'error';
-  progress: number;
-  files: number;
-  format: string;
-  destination: string;
-  createdAt: Date;
-  completedAt?: Date;
-  size?: number;
-  downloadUrl?: string;
-}
 
 interface ExportTemplate {
   id: string;
@@ -85,10 +79,32 @@ interface ExportTemplate {
 
 export default function ExportPage() {
   const { toast } = useToast();
-  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const [exportJobs, setExportJobs] = useState<ExportJob[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [currentTab, setCurrentTab] = useState('quick');
   const [isCreatingExport, setIsCreatingExport] = useState(false);
+  const [hasData, setHasData] = useState({ transcriptions: false, stems: false });
+
+  // Connect to real job store with IndexedDB persistence
+  const isHydrated = useJobStoreHydrated();
+  const { jobs, createJob, deleteJob, clearCompletedJobs, getJobsByType } = useJobStore();
+
+  // Get export jobs only
+  const exportJobs = jobs.filter(job => job.type === 'export');
+
+  // Check for available data on mount
+  useEffect(() => {
+    const checkData = async () => {
+      const [transcriptions, stems] = await Promise.all([
+        loadTranscriptionResults(),
+        loadStemResults(),
+      ]);
+      setHasData({
+        transcriptions: transcriptions.length > 0,
+        stems: stems.length > 0,
+      });
+    };
+    checkData();
+  }, []);
 
   // Export settings
   const [exportSettings, setExportSettings] = useState({
@@ -100,14 +116,22 @@ export default function ExportPage() {
     destination: 'local'
   });
 
-  // No mock data - export jobs are populated from actual user exports only
-  // TODO: Persist export history to Supabase or IndexedDB
 
   const handleCreateExport = useCallback(async (type: 'transcription' | 'stems' | 'analysis' | 'batch') => {
-    if (selectedFiles.length === 0 && type !== 'batch') {
+    // Check for available data
+    if (type === 'transcription' && !hasData.transcriptions) {
       toast({
-        title: "No files selected",
-        description: "Please select files to export",
+        title: "No transcription data",
+        description: "Process some audio files in Transcription first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (type === 'stems' && !hasData.stems) {
+      toast({
+        title: "No stem separation data",
+        description: "Process some audio files in Stem Separation first",
         variant: "destructive",
       });
       return;
@@ -115,93 +139,107 @@ export default function ExportPage() {
 
     setIsCreatingExport(true);
 
-    // Create new export job
-    const newJob: ExportJob = {
-      id: `job-${Date.now()}`,
-      name: `${type.charAt(0).toUpperCase() + type.slice(1)} Export ${new Date().toLocaleDateString()}`,
-      type,
-      status: 'processing',
-      progress: 0,
-      files: type === 'batch' ? 10 : selectedFiles.length,
-      format: exportSettings.format.toUpperCase(),
-      destination: exportSettings.destination,
-      createdAt: new Date()
-    };
+    try {
+      // Create real job in persistent store
+      const jobId = createJob(
+        'export',
+        selectedFiles.map((f, i) => ({
+          id: `file-${i}`,
+          name: f.name,
+          size: f.size,
+          type: f.type,
+        })),
+        { exportType: type, ...exportSettings }
+      );
 
-    setExportJobs(prev => [newJob, ...prev]);
+      toast({
+        title: "Export started",
+        description: `Processing ${type} export...`,
+      });
 
-    // Simulate processing
-    setTimeout(() => {
-      setExportJobs(prev => prev.map(job =>
-        job.id === newJob.id
-          ? {
-              ...job,
-              status: 'completed' as const,
-              progress: 100,
-              completedAt: new Date(),
-              size: Math.floor(Math.random() * 1000000) + 100000,
-              downloadUrl: `/downloads/${job.id}.zip`
-            }
-          : job
-      ));
+      // Run real export with job tracking
+      await runExportJob(jobId, type, {
+        format: exportSettings.format as 'midi' | 'musicxml' | 'json' | 'csv' | 'pdf' | 'wav' | 'mp3' | 'zip',
+        includeMetadata: exportSettings.includeMetadata,
+        includeAudio: exportSettings.includeAudio,
+        quality: exportSettings.quality,
+        includeTranscriptions: true,
+        includeStems: true,
+        includeAnalysis: true,
+      });
 
       toast({
         title: "Export completed",
-        description: `${newJob.name} is ready for download`,
+        description: "Your download should start automatically",
       });
-
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
       setIsCreatingExport(false);
-    }, 3000);
+    }
+  }, [selectedFiles, exportSettings, hasData, createJob, toast]);
 
-    // Simulate progress updates
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 20;
-      if (progress >= 65) {
-        clearInterval(interval);
-        progress = 65;
+  const handleDownloadJob = useCallback((job: ProcessingJob) => {
+    if (job.result?.downloadUrl) {
+      // Re-trigger download from stored blob
+      if (job.result.blobData) {
+        const url = URL.createObjectURL(job.result.blobData);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = (job.result.metadata?.filename as string) || 'export.zip';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      } else {
+        // Fallback to stored URL
+        window.open(job.result.downloadUrl, '_blank');
       }
-
-      setExportJobs(prev => prev.map(job =>
-        job.id === newJob.id ? { ...job, progress } : job
-      ));
-    }, 500);
-
-    toast({
-      title: "Export started",
-      description: `Processing ${newJob.files} file(s)`,
-    });
-  }, [selectedFiles, exportSettings, toast]);
-
-  const handleDownloadJob = useCallback((job: ExportJob) => {
-    if (job.downloadUrl) {
       toast({
         title: "Download started",
-        description: `Downloading ${job.name}`,
+        description: `Downloading export...`,
       });
     }
   }, [toast]);
 
   const handleDeleteJob = useCallback((jobId: string) => {
-    setExportJobs(prev => prev.filter(job => job.id !== jobId));
+    deleteJob(jobId);
     toast({
       title: "Export deleted",
       description: "Export job removed from history",
     });
-  }, [toast]);
+  }, [deleteJob, toast]);
 
-  const handleRetryJob = useCallback((jobId: string) => {
-    setExportJobs(prev => prev.map(job =>
-      job.id === jobId
-        ? { ...job, status: 'processing' as const, progress: 0 }
-        : job
-    ));
+  const handleRetryJob = useCallback(async (job: ProcessingJob) => {
+    // Re-run the export with the same settings
+    const settings = job.settings as { exportType?: string } | undefined;
+    const exportType = settings?.exportType as 'transcription' | 'stems' | 'analysis' | 'batch' || 'transcription';
 
-    toast({
-      title: "Export retried",
-      description: "Restarting export job",
-    });
-  }, [toast]);
+    setIsCreatingExport(true);
+    try {
+      const newJobId = createJob('export', job.files, job.settings);
+      await runExportJob(newJobId, exportType, {
+        format: 'midi',
+        includeMetadata: true,
+      });
+      toast({
+        title: "Export completed",
+        description: "Your download should start automatically",
+      });
+    } catch (error) {
+      toast({
+        title: "Export failed",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingExport(false);
+    }
+  }, [createJob, toast]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -241,6 +279,28 @@ export default function ExportPage() {
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
   };
+
+  // Helper functions for ProcessingJob display
+  const getJobName = (job: ProcessingJob) => {
+    const settings = job.settings as { exportType?: string } | undefined;
+    const exportType = settings?.exportType || 'export';
+    return `${exportType.charAt(0).toUpperCase() + exportType.slice(1)} Export`;
+  };
+
+  const getJobFormat = (job: ProcessingJob) => {
+    const settings = job.settings as { format?: string } | undefined;
+    return (settings?.format || 'ZIP').toUpperCase();
+  };
+
+  const getJobFileCount = (job: ProcessingJob) => {
+    return job.files?.length || 0;
+  };
+
+  const getJobSize = (job: ProcessingJob) => {
+    const size = job.result?.blobData?.size || job.result?.metadata?.size as number;
+    return size ? formatFileSize(size) : null;
+  };
+
 
   const exportTemplates: ExportTemplate[] = [
     {
@@ -396,11 +456,11 @@ export default function ExportPage() {
                 {exportJobs.slice(0, 3).map((job) => (
                   <div key={job.id} className="flex items-center gap-4 p-4 border rounded-lg">
                     <div className="flex items-center gap-2">
-                      {getFormatIcon(job.format)}
+                      {getFormatIcon(getJobFormat(job))}
                       <div>
-                        <p className="font-medium">{job.name}</p>
+                        <p className="font-medium">{getJobName(job)}</p>
                         <p className="text-sm text-muted-foreground">
-                          {job.files} files • {job.format} • {job.destination}
+                          {getJobFileCount(job)} files • {getJobFormat(job)} • {new Date(job.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
@@ -422,7 +482,7 @@ export default function ExportPage() {
                         </Button>
                       )}
                       {job.status === 'error' && (
-                        <Button size="sm" variant="outline" onClick={() => handleRetryJob(job.id)}>
+                        <Button size="sm" variant="outline" onClick={() => handleRetryJob(job)}>
                           <RefreshCw className="h-4 w-4" />
                         </Button>
                       )}
@@ -554,10 +614,15 @@ export default function ExportPage() {
                       <Plus className="h-4 w-4 mr-2" />
                       Add Files
                     </Button>
-                    <Button variant="outline" size="sm">
-                      <FolderOpen className="h-4 w-4 mr-2" />
-                      Browse
-                    </Button>
+                    <FileSelectorDialog
+                      onFilesSelected={(files) => setSelectedFiles(prev => [...prev, ...files])}
+                      trigger={
+                        <Button variant="outline" size="sm">
+                          <Layers className="h-4 w-4 mr-2" />
+                          Select from Library
+                        </Button>
+                      }
+                    />
                   </div>
 
                   <div className="text-sm text-muted-foreground">
@@ -565,11 +630,32 @@ export default function ExportPage() {
                   </div>
 
                   <div className="border rounded-lg p-4 min-h-[200px]">
-                    <div className="text-center text-muted-foreground">
-                      <FileAudio className="h-8 w-8 mx-auto mb-2" />
-                      <p>No files selected</p>
-                      <p className="text-sm">Add files to include in export</p>
-                    </div>
+                    {selectedFiles.length === 0 ? (
+                      <div className="text-center text-muted-foreground pt-12">
+                        <FileAudio className="h-8 w-8 mx-auto mb-2" />
+                        <p>No files selected</p>
+                        <p className="text-sm">Add files to include in export</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {selectedFiles.map((file, i) => (
+                           <div key={i} className="flex items-center justify-between p-2 bg-muted rounded-md group">
+                             <div className="flex items-center gap-2 truncate">
+                               <FileAudio className="h-4 w-4 text-primary" />
+                               <span className="text-sm truncate">{file.name}</span>
+                             </div>
+                             <Button
+                               variant="ghost"
+                               size="icon"
+                               className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                               onClick={() => setSelectedFiles(prev => prev.filter((_, idx) => idx !== i))}
+                             >
+                               <X className="h-3 w-3" />
+                             </Button>
+                           </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <Button
@@ -667,12 +753,12 @@ export default function ExportPage() {
                 {exportJobs.map((job) => (
                   <div key={job.id} className="flex items-center gap-4 p-4 border rounded-lg">
                     <div className="flex items-center gap-3">
-                      {getFormatIcon(job.format)}
+                      {getFormatIcon(getJobFormat(job))}
                       <div>
-                        <p className="font-medium">{job.name}</p>
+                        <p className="font-medium">{getJobName(job)}</p>
                         <p className="text-sm text-muted-foreground">
-                          Created {job.createdAt.toLocaleString()}
-                          {job.completedAt && ` • Completed ${job.completedAt.toLocaleString()}`}
+                          Created {new Date(job.createdAt).toLocaleString()}
+                          {job.completedAt && ` • Completed ${new Date(job.completedAt).toLocaleString()}`}
                         </p>
                       </div>
                     </div>
@@ -682,11 +768,11 @@ export default function ExportPage() {
                         {getStatusIcon(job.status)}
                         <span className="text-sm capitalize">{job.status}</span>
                         <span className="text-sm text-muted-foreground">
-                          • {job.files} files • {job.format}
+                          • {getJobFileCount(job)} files • {getJobFormat(job)}
                         </span>
-                        {job.size && (
+                        {getJobSize(job) && (
                           <span className="text-sm text-muted-foreground">
-                            • {formatFileSize(job.size)}
+                            • {getJobSize(job)}
                           </span>
                         )}
                       </div>
@@ -696,13 +782,13 @@ export default function ExportPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {job.status === 'completed' && job.downloadUrl && (
+                      {job.status === 'completed' && job.result?.downloadUrl && (
                         <Button size="sm" onClick={() => handleDownloadJob(job)}>
                           <Download className="h-4 w-4" />
                         </Button>
                       )}
                       {job.status === 'error' && (
-                        <Button size="sm" variant="outline" onClick={() => handleRetryJob(job.id)}>
+                        <Button size="sm" variant="outline" onClick={() => handleRetryJob(job)}>
                           <RefreshCw className="h-4 w-4" />
                         </Button>
                       )}

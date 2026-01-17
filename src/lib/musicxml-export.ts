@@ -281,7 +281,9 @@ export function downloadMusicXML(
   URL.revokeObjectURL(url);
 }
 
-export default {
+const musicXmlExport = {
   exportToMusicXML,
   downloadMusicXML,
 };
+
+export default musicXmlExport;

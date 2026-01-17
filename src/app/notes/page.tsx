@@ -27,7 +27,10 @@ import {
   Save,
   FolderOpen,
   Plus,
+  Layers,
 } from 'lucide-react';
+
+import { FileSelectorDialog } from '@/components/file-selector-dialog';
 
 export default function NotesPage() {
   const { toast } = useToast();
@@ -391,6 +394,22 @@ export default function NotesPage() {
                 files={files}
                 onFilesChange={handleFilesChange}
                 maxFiles={1}
+              />
+
+              <div className="flex items-center gap-2 my-2">
+                <div className="h-px bg-border flex-1" />
+                <span className="text-xs text-muted-foreground">OR</span>
+                <div className="h-px bg-border flex-1" />
+              </div>
+
+              <FileSelectorDialog
+                onFilesSelected={handleFilesChange}
+                trigger={
+                  <Button variant="outline" className="w-full">
+                    <Layers className="h-4 w-4 mr-2" />
+                    Select from Library
+                  </Button>
+                }
               />
 
               {isProcessing && (

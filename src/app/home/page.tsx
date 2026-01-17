@@ -25,7 +25,11 @@ import {
   Share2,
   Database,
   Wifi,
-  Radio
+  Radio,
+  FolderOpen,
+  HardDrive,
+  Layers,
+  Repeat,
 } from 'lucide-react';
 
 const features = [
@@ -223,6 +227,89 @@ export default function LandingPage() {
       </section>
 
       {/* Workflow Section */}
+      <section className="relative z-10 px-6 lg:px-12 py-32 bg-white/5 border-y border-white/5">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-violet-500/20 border-violet-500/30 text-violet-300">New Workflow</Badge>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">
+              Workflow Your Way
+            </h2>
+            <p className="text-xl text-white/50 max-w-2xl mx-auto">
+               Choose how you manage your research data with our new Hybrid File System.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+             {/* Card 1: Hybrid Storage */}
+            <div className="relative p-8 rounded-3xl bg-black/40 border border-white/10 backdrop-blur-sm overflow-hidden group hover:border-violet-500/50 transition-colors">
+               <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                 <HardDrive className="h-32 w-32" />
+               </div>
+               <div className="relative z-10">
+                 <div className="inline-flex p-3 rounded-xl bg-violet-500/20 text-violet-300 mb-6">
+                   <FolderOpen className="h-6 w-6" />
+                 </div>
+                 <h3 className="text-2xl font-bold mb-3">Hybrid Storage</h3>
+                 <p className="text-white/60 mb-6 leading-relaxed">
+                   Two ways to connect your data:
+                 </p>
+                 <ul className="space-y-3">
+                   <li className="flex items-start gap-3">
+                     <span className="mt-1 bg-white/10 p-1 rounded">
+                       <Cloud className="h-3 w-3 text-blue-400" />
+                     </span>
+                     <div>
+                       <strong className="text-white block">Browser Import</strong>
+                       <span className="text-sm text-white/50">Secure, isolated copies. Perfect for quick edits.</span>
+                     </div>
+                   </li>
+                   <li className="flex items-start gap-3">
+                     <span className="mt-1 bg-white/10 p-1 rounded">
+                       <Sparkles className="h-3 w-3 text-green-400" />
+                     </span>
+                     <div>
+                       <strong className="text-white block">Local Sync</strong>
+                       <span className="text-sm text-white/50">Connect real folders. Edits reflect instantly on your drive.</span>
+                     </div>
+                   </li>
+                 </ul>
+               </div>
+            </div>
+
+             {/* Card 2: Universal Library */}
+            <div className="relative p-8 rounded-3xl bg-black/40 border border-white/10 backdrop-blur-sm overflow-hidden group hover:border-pink-500/50 transition-colors">
+               <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                 <Layers className="h-32 w-32" />
+               </div>
+               <div className="relative z-10">
+                 <div className="inline-flex p-3 rounded-xl bg-pink-500/20 text-pink-300 mb-6">
+                   <Repeat className="h-6 w-6" />
+                 </div>
+                 <h3 className="text-2xl font-bold mb-3">Universal Access</h3>
+                 <p className="text-white/60 mb-6 leading-relaxed">
+                   Your files follow you everywhere.
+                 </p>
+                  <ul className="space-y-4">
+                   <li className="flex items-center gap-3">
+                     <CheckCircle className="h-5 w-5 text-pink-500" />
+                     <span className="text-white/80">Load files directly inside any tool</span>
+                   </li>
+                   <li className="flex items-center gap-3">
+                     <CheckCircle className="h-5 w-5 text-pink-500" />
+                     <span className="text-white/80">No more context switching to Dashboard</span>
+                   </li>
+                    <li className="flex items-center gap-3">
+                     <CheckCircle className="h-5 w-5 text-pink-500" />
+                     <span className="text-white/80">Unified "Active Library" view</span>
+                   </li>
+                 </ul>
+               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Research Section (Modified ID to stay unique if needed, but keeping existing structure) */}
       <section id="research" className="relative z-10 px-6 lg:px-12 py-32">
         <div className="max-w-6xl mx-auto">
            <div className="grid lg:grid-cols-2 gap-16 items-center">

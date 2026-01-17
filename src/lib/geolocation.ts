@@ -280,7 +280,7 @@ export function clearWatch(watchId: number): void {
   }
 }
 
-export default {
+const geolocationUtils = {
   isGeolocationAvailable,
   getCurrentPosition,
   getPlaceName,
@@ -291,3 +291,5 @@ export default {
   watchPosition,
   clearWatch,
 };
+
+export default geolocationUtils;

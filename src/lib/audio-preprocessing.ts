@@ -365,7 +365,7 @@ export const PRESETS = {
   },
 };
 
-export default {
+const audioPreprocessing = {
   preprocessAudio,
   PRESETS,
   calculateRMS,
@@ -373,3 +373,5 @@ export default {
   linearToDb,
   dbToLinear,
 };
+
+export default audioPreprocessing;

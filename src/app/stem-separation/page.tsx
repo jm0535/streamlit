@@ -953,14 +953,32 @@ export default function StemSeparationPage() {
             <CardContent>
               {uploadedFiles.length === 0 ? (
                 <div className="p-6 text-center">
-                  <Button
-                    onClick={() => window.location.href = '/dashboard'}
-                    variant="default"
-                    size="lg"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Go to Dashboard to Upload Files
-                  </Button>
+                  <div className="flex flex-col items-center gap-4">
+                    <FileSelectorDialog
+                      onFilesSelected={handleFileUpload}
+                      trigger={
+                        <Button size="lg" className="w-full sm:w-auto">
+                          <Layers className="h-4 w-4 mr-2" />
+                          Select from Library
+                        </Button>
+                      }
+                    />
+
+                    <div className="flex items-center gap-2 w-full max-w-xs">
+                      <div className="h-px bg-border flex-1" />
+                      <span className="text-xs text-muted-foreground">OR</span>
+                      <div className="h-px bg-border flex-1" />
+                    </div>
+
+                    <Button
+                      onClick={() => window.location.href = '/dashboard'}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload New Files
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1005,6 +1023,18 @@ export default function StemSeparationPage() {
                       <Trash2 className="h-3 w-3 mr-1" />
                       Clear All
                     </Button>
+                  </div>
+
+                   <div className="pt-2">
+                    <FileSelectorDialog
+                      onFilesSelected={(files) => handleFileUpload([...uploadedFiles, ...files])}
+                      trigger={
+                        <Button variant="outline" size="sm" className="w-full">
+                          <Layers className="h-4 w-4 mr-2" />
+                          Add More from Library
+                        </Button>
+                      }
+                    />
                   </div>
                 </div>
               )}

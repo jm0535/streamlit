@@ -223,7 +223,7 @@ export function quantizeNotes(
   }));
 }
 
-export default {
+const midiUtils = {
   midiToNoteName,
   noteNameToMidi,
   frequencyToMidi,
@@ -234,3 +234,5 @@ export default {
   createNote,
   quantizeNotes,
 };
+
+export default midiUtils;

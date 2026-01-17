@@ -428,6 +428,8 @@ export async function analyzeLinguistics(
   };
 }
 
-export default {
+const linguisticsAnalysis = {
   analyzeLinguistics,
 };
+
+export default linguisticsAnalysis;

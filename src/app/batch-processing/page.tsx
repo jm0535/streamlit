@@ -30,7 +30,10 @@ import {
   Eye,
   Edit,
   Copy,
+  Layers,
 } from "lucide-react";
+
+import { FileSelectorDialog } from "@/components/file-selector-dialog";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -593,20 +596,32 @@ export default function BatchProcessingPage() {
                   : 'Upload audio files from the Dashboard'}
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              {batchFiles.length === 0 ? (
-                <div className="p-6 text-center">
-                  <Button
-                    onClick={() => window.location.href = '/dashboard'}
-                    variant="default"
-                    size="lg"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Go to Dashboard to Upload Files
+            <CardContent className="space-y-4">
+              <AudioFileUpload
+                files={[]}
+                onFilesChange={handleFileUpload}
+                maxFiles={50}
+                accept={['audio/*']}
+              />
+
+              <div className="flex items-center gap-2">
+                <div className="h-px bg-border flex-1" />
+                <span className="text-xs text-muted-foreground">OR</span>
+                <div className="h-px bg-border flex-1" />
+              </div>
+
+              <FileSelectorDialog
+                onFilesSelected={(files) => handleFileUpload(files)}
+                trigger={
+                  <Button variant="outline" className="w-full">
+                    <Layers className="h-4 w-4 mr-2" />
+                    Select from Library
                   </Button>
-                </div>
-              ) : (
-                <div className="space-y-2">
+                }
+              />
+
+              {batchFiles.length > 0 && (
+                <div className="space-y-2 pt-4 border-t">
                   <div className="flex items-center justify-between text-sm">
                     <span>Queue size</span>
                     <span>{batchFiles.length}/50</span>

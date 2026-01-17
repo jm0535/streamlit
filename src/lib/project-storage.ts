@@ -415,7 +415,7 @@ export function createProject(name: string): Project {
   };
 }
 
-export default {
+const projectStorage = {
   saveProject,
   loadProject,
   listProjects,
@@ -430,3 +430,5 @@ export default {
   generateId,
   createProject,
 };
+
+export default projectStorage;

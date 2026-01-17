@@ -53,8 +53,12 @@ import {
   RefreshCw,
   FileText,
   Database,
+
   Radio,
+  Layers,
 } from "lucide-react";
+
+import { FileSelectorDialog } from "@/components/file-selector-dialog";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -534,15 +538,28 @@ export default function AudioAnalysisPage() {
             </CardHeader>
             <CardContent>
               {uploadedFiles.length === 0 ? (
-                <div className="p-6 text-center">
-                  <Button
-                    onClick={() => window.location.href = '/dashboard'}
-                    variant="default"
-                    size="lg"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Go to Dashboard to Upload Files
-                  </Button>
+                <div className="p-6 text-center space-y-4">
+                  <div className="text-center text-muted-foreground mb-2">
+                    <p>No audio loaded for analysis.</p>
+                  </div>
+                  <div className="flex flex-col sm:flex-row justify-center gap-3">
+                    <FileSelectorDialog
+                      onFilesSelected={(files) => handleFileUpload(files)}
+                      trigger={
+                        <Button variant="default">
+                          <Layers className="h-4 w-4 mr-2" />
+                          Select from Library
+                        </Button>
+                      }
+                    />
+                    <Button
+                      onClick={() => window.location.href = '/dashboard'}
+                      variant="outline"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Go to Dashboard
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2">

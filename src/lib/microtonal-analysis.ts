@@ -285,9 +285,11 @@ function matchScalePattern(detected: number[], known: number[]): number {
   return matchCount / Math.max(detected.length, known.length);
 }
 
-export default {
+const microtonalAnalysis = {
   analyzeMicrotonal,
   calculateCentsDeviation,
   frequencyToMidi,
   midiToFrequency,
 };
+
+export default microtonalAnalysis;

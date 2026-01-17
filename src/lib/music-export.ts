@@ -406,10 +406,12 @@ function escapeXml(str: string): string {
     .replace(/'/g, '&apos;');
 }
 
-export default {
+const musicExport = {
   exportToMusicXML,
   exportToJSON,
   downloadMusicXML,
   downloadJSON,
   analyzeNotes,
 };
+
+export default musicExport;

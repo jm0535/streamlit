@@ -192,7 +192,7 @@ export function NotesSkeleton() {
   );
 }
 
-export default {
+const LoadingSkeletons = {
   PageSkeleton,
   CardSkeleton,
   AnalysisSkeleton,
@@ -201,3 +201,5 @@ export default {
   MixerSkeleton,
   NotesSkeleton,
 };
+
+export default LoadingSkeletons;

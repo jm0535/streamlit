@@ -185,6 +185,7 @@ export default function TranscriptionPage() {
 
     try {
       const newResults: TranscriptionResult[] = [];
+      const skippedFiles: string[] = [];
 
       for (let fileIndex = 0; fileIndex < uploadedFiles.length; fileIndex++) {
         const file = uploadedFiles[fileIndex];
@@ -195,10 +196,24 @@ export default function TranscriptionPage() {
           status: `Processing ${file.name} (${fileIndex + 1}/${uploadedFiles.length})...`
         });
 
-        // Decode audio file to AudioBuffer
-        const arrayBuffer = await file.arrayBuffer();
+        // Try to decode audio file to AudioBuffer
+        let audioBuffer: AudioBuffer;
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        } catch (decodeError) {
+          console.warn(`Failed to decode ${file.name}:`, decodeError);
+          skippedFiles.push(file.name);
+          await audioContext.close();
+          toast({
+            title: `Skipping ${file.name}`,
+            description: "Unable to decode audio. File may be corrupted or in an unsupported format.",
+            variant: "destructive",
+          });
+          continue; // Skip this file and continue with others
+        }
 
         const startTime = performance.now();
 

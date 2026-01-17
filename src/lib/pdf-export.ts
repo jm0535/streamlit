@@ -288,7 +288,9 @@ export function exportNotesAsText(notes: Note[]): string {
   return output;
 }
 
-export default {
+const pdfExport = {
   exportNotesToPDF,
   exportNotesAsText,
 };
+
+export default pdfExport;

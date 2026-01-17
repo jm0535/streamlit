@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from "react";
 import { useFileStore } from "@/lib/file-store";
+import { useJobStore, useJobStoreHydrated, FileProcessingStatus } from "@/lib/job-store";
 import { useToast } from "@/hooks/use-toast";
 import {
   FileAudio,
@@ -31,6 +32,7 @@ import {
   Zap,
   AlertCircle,
   CheckCircle,
+  Loader2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -100,9 +102,11 @@ export default function FilesPage() {
     "all" | "processed" | "unprocessed" | "starred"
   >("all");
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
-  // No mock data - files are populated from user uploads only
-  // Connect to global store
+
+  // Connect to stores
   const { activeFiles, connectLocalFolder, directoryHandle } = useFileStore();
+  const { fileStatuses, createJob, updateFileStatus, getFileStatus } = useJobStore();
+  const isJobStoreHydrated = useJobStoreHydrated();
 
   useEffect(() => {
     // Sync activeFiles from store to local audioFiles state
@@ -130,6 +134,54 @@ export default function FilesPage() {
       });
     }
   }, [activeFiles]);
+
+  // Helper to map JobStatus to AudioFile status type
+  const mapJobStatusToFileStatus = (status: string): "pending" | "processing" | "completed" | "error" => {
+    switch (status) {
+      case 'completed': return 'completed';
+      case 'error': return 'error';
+      case 'processing': return 'processing';
+      case 'pending':
+      case 'queued':
+      case 'cancelled':
+      default: return 'pending';
+    }
+  };
+
+  // Sync file processing statuses from job store on mount
+  useEffect(() => {
+    if (!isJobStoreHydrated || audioFiles.length === 0 || fileStatuses.length === 0) return;
+
+    setAudioFiles((prevFiles) =>
+      prevFiles.map((file) => {
+        const status = getFileStatus(file.id);
+        if (status) {
+          return {
+            ...file,
+            transcription: status.transcription ? {
+              id: status.transcription.jobId,
+              status: mapJobStatusToFileStatus(status.transcription.status),
+              progress: status.transcription.status === 'completed' ? 100 : 0,
+            } : file.transcription,
+            stemSeparation: status.stemSeparation ? {
+              id: status.stemSeparation.jobId,
+              status: mapJobStatusToFileStatus(status.stemSeparation.status),
+              progress: status.stemSeparation.status === 'completed' ? 100 : 0,
+            } : file.stemSeparation,
+            analysis: status.analysis ? {
+              id: status.analysis.jobId,
+              status: mapJobStatusToFileStatus(status.analysis.status),
+              progress: status.analysis.status === 'completed' ? 100 : 0,
+            } : file.analysis,
+            processed: !!(status.transcription?.status === 'completed' ||
+                          status.stemSeparation?.status === 'completed' ||
+                          status.analysis?.status === 'completed'),
+          };
+        }
+        return file;
+      })
+    );
+  }, [isJobStoreHydrated, fileStatuses, getFileStatus]);
 
   const handleFileUpload = useCallback(
     (files: File[]) => {
@@ -194,42 +246,72 @@ export default function FilesPage() {
 
   const handleProcessFiles = useCallback(
     (processType: "transcription" | "stem-separation" | "analysis") => {
-      setSelectedFiles((prev) => {
-        const filesToProcess =
-          prev.length > 0 ? prev : getFilteredFiles().map((f) => f.id);
+      const filesToProcess =
+        selectedFiles.length > 0 ? selectedFiles : getFilteredFiles().map((f) => f.id);
 
-        setAudioFiles((audioFiles) =>
-          audioFiles.map((file) => {
-            if (filesToProcess.includes(file.id)) {
-              const processKey =
-                processType === "transcription"
-                  ? "transcription"
-                  : processType === "stem-separation"
-                  ? "stemSeparation"
-                  : "analysis";
+      if (filesToProcess.length === 0) {
+        toast({
+          title: "No files selected",
+          description: "Please select files to process",
+          variant: "destructive",
+        });
+        return;
+      }
 
-              return {
-                ...file,
-                [processKey]: {
-                  id: `${processType}-${file.id}`,
-                  status: "processing" as const,
-                  progress: 0,
-                },
-              };
-            }
-            return file;
-          })
-        );
+      // Get actual file objects for job creation
+      const jobFiles = filesToProcess
+        .map((id) => audioFiles.find((f) => f.id === id))
+        .filter((f): f is AudioFile => f !== undefined)
+        .map((f) => ({
+          id: f.id,
+          name: f.name,
+          size: f.size,
+          type: f.format,
+        }));
 
-        return prev;
-      });
+      // Map process type to job type
+      const jobType = processType === "stem-separation" ? "stem-separation" : processType;
+
+      // Create real job in persistent store
+      const jobId = createJob(jobType as any, jobFiles);
+
+      // Update file statuses
+      const processKey =
+        processType === "transcription"
+          ? "transcription"
+          : processType === "stem-separation"
+          ? "stemSeparation"
+          : "analysis";
+
+      // Update local state with job reference
+      setAudioFiles((prevFiles) =>
+        prevFiles.map((file) => {
+          if (filesToProcess.includes(file.id)) {
+            // Also update the persistent file status
+            updateFileStatus(file.id, file.name, processKey, jobId, "processing");
+
+            return {
+              ...file,
+              [processKey]: {
+                id: jobId,
+                status: "processing" as const,
+                progress: 0,
+              },
+            };
+          }
+          return file;
+        })
+      );
 
       toast({
         title: "Processing started",
-        description: `${processType} initiated for selected files`,
+        description: `${processType} job created for ${jobFiles.length} file(s). Navigate to ${processType} page to monitor progress.`,
       });
+
+      // Clear selection
+      setSelectedFiles([]);
     },
-    [toast]
+    [selectedFiles, audioFiles, createJob, updateFileStatus, toast]
   );
 
   const getFilteredFiles = useCallback(() => {
