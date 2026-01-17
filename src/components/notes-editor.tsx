@@ -97,7 +97,7 @@ export function NotesEditor({
   const [scoreWidth, setScoreWidth] = useState(1000);
   const scoreContainerRef = useRef<HTMLDivElement>(null);
 
-  // Piano roll dimensions
+  // Note editor dimensions
   const PIANO_KEY_WIDTH = 60;
   const NOTE_HEIGHT = 16;
   const PIXELS_PER_SECOND = 100 * zoom;
@@ -441,7 +441,7 @@ export function NotesEditor({
         </div>
       </div>
 
-      {/* Piano Roll Grid */}
+      {/* Note Editor Grid */}
       {/* Main View Area */}
       {viewMode === 'score' ? (
         <div id="notes-score-view" ref={scoreContainerRef} className="flex-1 overflow-auto bg-white relative">

@@ -32,6 +32,7 @@ import {
   Save,
   VolumeX,
   Trash2,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -59,7 +60,7 @@ import {
 import { AudioFileUpload } from "@/components/audio-file-upload";
 import { AudioVisualizer } from "@/components/audio-visualizer";
 import StemSeparationViewer from "@/components/StemSeparationViewer";
-import { separateAudioWithDemucs, audioBufferToWavBlob, checkBrowserSupport, SeparationProgress } from "@/lib/demucs-service";
+import { separateAudioWithDemucs, audioBufferToWavBlob, checkBrowserSupport, SeparationProgress, QualityMode } from "@/lib/demucs-service";
 import { useRouter } from "next/navigation";
 
 interface StemTrack {
@@ -143,6 +144,12 @@ export default function StemSeparationPage() {
     startTime: null,
     eta: null,
   });
+
+  // Ref to track cancellation
+  const isCancelledRef = useRef(false);
+
+  // Quality mode for speed/quality trade-off
+  const [qualityMode, setQualityMode] = useState<QualityMode>('balanced');
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -390,7 +397,20 @@ export default function StemSeparationPage() {
     });
   }, []);
 
+  // Cancel/abort separation
+  const handleCancelSeparation = useCallback(() => {
+    isCancelledRef.current = true;
+    setIsProcessing(false);
+    setProgressInfo({ percent: 0, stage: '', message: '', startTime: null, eta: null });
+    toast({
+      title: "Cancelled",
+      description: "Stem separation was cancelled",
+    });
+  }, [toast]);
+
   const startSeparation = useCallback(async () => {
+    // Reset cancel flag
+    isCancelledRef.current = false;
     if (uploadedFiles.length === 0) {
       toast({
         title: "No files selected",
@@ -447,12 +467,15 @@ export default function StemSeparationPage() {
         const arrayBuffer = await file.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
 
+        // Track start time for ETA calculation
+        const processStartTime = Date.now();
+
         // Run ML-based stem separation with Demucs
         const mlStems = await separateAudioWithDemucs(audioBuffer, (progress: SeparationProgress) => {
           console.log(`[Demucs] ${progress.stage}: ${progress.percent}% - ${progress.message}`);
 
-          // Calculate ETA
-          const elapsed = (Date.now() - (progressInfo.startTime || Date.now())) / 1000;
+          // Calculate ETA using local processStartTime
+          const elapsed = (Date.now() - processStartTime) / 1000;
           let eta: string | null = null;
 
           if (progress.percent > 5 && progress.percent < 100) {
@@ -469,10 +492,10 @@ export default function StemSeparationPage() {
             percent: progress.percent,
             stage: progress.stage,
             message: progress.message,
-            startTime: progressInfo.startTime,
+            startTime: processStartTime,
             eta,
           });
-        });
+        }, qualityMode);
 
         const processingTime = (performance.now() - fileStartTime) / 1000;
 
@@ -579,7 +602,7 @@ export default function StemSeparationPage() {
       setIsProcessing(false);
       setProgressInfo({ percent: 0, stage: '', message: '', startTime: null, eta: null });
     }
-  }, [uploadedFiles, selectedFileIndices, toast]);
+  }, [uploadedFiles, selectedFileIndices, qualityMode, toast]);
 
   const handleAnalyzeStem = useCallback(async (stem: StemTrack, fileName: string) => {
     if (!stem.blob) return;
@@ -760,85 +783,66 @@ export default function StemSeparationPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                {/* Model Info */}
+                <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                  <p className="font-medium mb-1">🤖 Demucs htdemucs Model</p>
+                  <p className="text-muted-foreground text-xs">
+                    State-of-the-art ML model for music source separation. Runs entirely in your browser.
+                  </p>
+                </div>
+
+                {/* Processing Speed */}
                 <div className="space-y-2">
-                  <Label>Algorithm</Label>
+                  <Label>Processing Speed</Label>
                   <select
-                    value={separationSettings.algorithm}
-                    onChange={(e) =>
-                      setSeparationSettings((prev) => ({
-                        ...prev,
-                        algorithm: e.target.value as "frequency" | "ml" | "hybrid",
-                      }))
-                    }
-                    className="w-full p-2 border rounded-md"
+                    value={qualityMode}
+                    onChange={(e) => setQualityMode(e.target.value as QualityMode)}
+                    className="w-full p-2 border rounded-md bg-background"
                   >
-                    <option value="frequency">Frequency-Based</option>
-                    <option value="ml">Machine Learning</option>
-                    <option value="hybrid">Hybrid (Best Quality)</option>
+                    <option value="fast">⚡ Fast (~2x faster, lower quality)</option>
+                    <option value="balanced">⚖️ Balanced (default)</option>
+                    <option value="quality">🎵 High Quality (slower, best results)</option>
                   </select>
+                  <p className="text-xs text-muted-foreground">
+                    Fast mode reduces segment overlap for quicker processing.
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Quality</Label>
-                  <select
-                    value={separationSettings.quality}
-                    onChange={(e) =>
-                      setSeparationSettings((prev) => ({
-                        ...prev,
-                        quality: e.target.value as "low" | "medium" | "high",
-                      }))
-                    }
-                    className="w-full p-2 border rounded-md"
-                  >
-                    <option value="low">Low (Faster)</option>
-                    <option value="medium">Medium (Balanced)</option>
-                    <option value="high">High (Best Quality)</option>
-                  </select>
-                </div>
+
+                {/* Output Stems Info */}
                 <div className="border-t pt-4 space-y-3">
-                  <Label className="font-semibold">Processing Options</Label>
-                  <div className="flex items-center justify-between">
-                    <Label className="font-normal">Preserve Stereo</Label>
-                    <Switch
-                      checked={separationSettings.preserveStereo}
-                      onCheckedChange={(checked) =>
-                        setSeparationSettings((prev) => ({ ...prev, preserveStereo: checked }))
-                      }
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label className="font-normal">Noise Reduction</Label>
-                    <Switch
-                      checked={separationSettings.noiseReduction}
-                      onCheckedChange={(checked) =>
-                        setSeparationSettings((prev) => ({ ...prev, noiseReduction: checked }))
-                      }
-                    />
-                  </div>
-                </div>
-                <div className="border-t pt-4 space-y-3">
-                  <Label className="font-semibold">Stems to Extract</Label>
-                  {[
-                    { key: "enableBass", label: "Bass" },
-                    { key: "enableDrums", label: "Drums" },
-                    { key: "enableGuitar", label: "Guitar" },
-                    { key: "enableVocals", label: "Vocals" },
-                    { key: "enablePiano", label: "Piano" },
-                    { key: "enableOther", label: "Other" },
-                  ].map(({ key, label }) => (
-                    <div key={key} className="flex items-center justify-between">
-                      <Label className="font-normal">{label}</Label>
-                      <Switch
-                        checked={
-                          typeof separationSettings[key as keyof typeof separationSettings] === "boolean"
-                            ? (separationSettings[key as keyof typeof separationSettings] as boolean)
-                            : false
-                        }
-                        onCheckedChange={(checked) =>
-                          setSeparationSettings((prev) => ({ ...prev, [key]: checked }))
-                        }
-                      />
+                  <Label className="font-semibold">Output Stems (4-stem model)</Label>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
+                      <span className="w-2 h-2 rounded-full bg-orange-500" />
+                      <span>Drums</span>
                     </div>
-                  ))}
+                    <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
+                      <span className="w-2 h-2 rounded-full bg-purple-500" />
+                      <span>Bass</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
+                      <span className="w-2 h-2 rounded-full bg-pink-500" />
+                      <span>Vocals</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 bg-muted/30 rounded">
+                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                      <span>Other (guitars, keys, synths)</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    The htdemucs model always outputs all 4 stems. Each stem is automatically saved after processing.
+                  </p>
+                </div>
+
+                {/* Technical Info */}
+                <div className="border-t pt-4 space-y-2">
+                  <Label className="font-semibold">Technical Details</Label>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>• Model: htdemucs_embedded.onnx (~172MB)</p>
+                    <p>• Sample Rate: 44.1kHz (resampled automatically)</p>
+                    <p>• Output: Stereo stems with same duration as input</p>
+                    <p>• Backend: ONNX Runtime (WebGPU when available)</p>
+                  </div>
                 </div>
               </div>
             </DialogContent>
@@ -865,6 +869,31 @@ export default function StemSeparationPage() {
       {/* Progress Bar - shows during processing */}
       {isProcessing && (
         <div className="mb-6 p-4 bg-muted/50 rounded-lg border">
+          {/* Step indicators */}
+          <div className="flex items-center gap-2 mb-3">
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${
+              progressInfo.stage === 'loading' || progressInfo.stage === 'downloading' || progressInfo.stage === 'initializing'
+                ? 'bg-primary text-primary-foreground'
+                : progressInfo.stage === 'processing' || progressInfo.stage === 'complete'
+                ? 'bg-green-500/20 text-green-400'
+                : 'bg-muted text-muted-foreground'
+            }`}>
+              <span className="w-4 h-4 flex items-center justify-center rounded-full bg-current/20 text-[10px]">1</span>
+              Load Model
+            </div>
+            <div className="w-4 h-px bg-border" />
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${
+              progressInfo.stage === 'processing'
+                ? 'bg-primary text-primary-foreground'
+                : progressInfo.stage === 'complete'
+                ? 'bg-green-500/20 text-green-400'
+                : 'bg-muted text-muted-foreground'
+            }`}>
+              <span className="w-4 h-4 flex items-center justify-center rounded-full bg-current/20 text-[10px]">2</span>
+              Separate Audio
+            </div>
+          </div>
+
           <div className="flex justify-between items-center mb-2">
             <div className="flex items-center gap-2">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -875,6 +904,15 @@ export default function StemSeparationPage() {
               {progressInfo.eta && (
                 <span className="text-xs">ETA: {progressInfo.eta}</span>
               )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCancelSeparation}
+                className="h-6 w-6 p-0 hover:bg-destructive/20"
+                title="Cancel"
+              >
+                <X className="h-4 w-4 text-destructive" />
+              </Button>
             </div>
           </div>
           <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
@@ -1263,22 +1301,7 @@ export default function StemSeparationPage() {
         </div>
       </div>
 
-      {/* Progress Bar for Processing */}
-      {isProcessing && (
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <div className="flex-1">
-                <p className="text-sm font-medium mb-2">
-                  Separating audio stems...
-                </p>
-                <Progress value={undefined} className="w-full" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
     </div>
   );
 }

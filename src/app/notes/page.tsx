@@ -90,7 +90,7 @@ export default function NotesPage() {
       try {
         sessionStorage.setItem('pianoRollNotes', JSON.stringify(notes));
       } catch (err) {
-        console.error('Failed to save piano roll notes:', err);
+        console.error('Failed to save note editor notes:', err);
       }
     }
   }, [notes]);
@@ -212,7 +212,7 @@ export default function NotesPage() {
     }
   }, [notes, fileName, tempo, duration, toast]);
 
-  // Handle notes change from piano roll
+  // Handle notes change from note editor
   const handleNotesChange = useCallback((newNotes: Note[]) => {
     setNotes(newNotes);
   }, []);
@@ -314,7 +314,7 @@ export default function NotesPage() {
             </CardContent>
           </Card>
 
-          {/* Piano Roll */}
+          {/* Note Editor */}
           <Card>
             <CardHeader className="pb-0">
               <CardTitle className="flex items-center gap-2">
@@ -349,7 +349,7 @@ export default function NotesPage() {
                 Import Audio File
               </CardTitle>
               <CardDescription>
-                Upload an audio file to automatically extract notes and display in the piano roll
+                Upload an audio file to automatically extract notes and display in the note editor
               </CardDescription>
             </CardHeader>
             <CardContent>

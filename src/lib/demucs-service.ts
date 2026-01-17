@@ -27,6 +27,7 @@ const MODEL_URL = 'https://huggingface.co/timcsy/demucs-web-onnx/resolve/main/ht
 // Cached processor instance
 let processorInstance: any = null;
 let isModelLoaded = false;
+let currentProcessorQuality: QualityMode | null = null;
 
 /**
  * Convert Float32Array stereo to AudioBuffer
@@ -47,13 +48,27 @@ function floatArrayToAudioBuffer(
   return buffer;
 }
 
+// Quality modes for speed/quality trade-off
+export type QualityMode = 'fast' | 'balanced' | 'quality';
+
+// Quality presets affect overlap and processing
+const QUALITY_PRESETS = {
+  fast: { overlap: 0.05, description: 'Fast (~2x faster, lower quality)' },
+  balanced: { overlap: 0.15, description: 'Balanced (default)' },
+  quality: { overlap: 0.25, description: 'High Quality (slower, best results)' },
+};
+
 /**
  * Main function to separate audio into stems using Demucs ONNX
  */
 export async function separateAudioWithDemucs(
   audioBuffer: AudioBuffer,
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  qualityMode: QualityMode = 'balanced'
 ): Promise<StemSeparationResult> {
+
+  const preset = QUALITY_PRESETS[qualityMode];
+  console.log(`[Demucs] Using ${qualityMode} mode (overlap: ${preset.overlap})`);
 
   onProgress?.({
     stage: 'loading',
@@ -101,8 +116,16 @@ export async function separateAudioWithDemucs(
       }
     }
 
+    // Reset processor if quality mode changed
+    if (processorInstance && currentProcessorQuality !== qualityMode) {
+      console.log(`[Demucs] Quality mode changed from ${currentProcessorQuality} to ${qualityMode}, resetting processor`);
+      processorInstance = null;
+      isModelLoaded = false;
+    }
+
     // Create or reuse processor
     if (!processorInstance) {
+      currentProcessorQuality = qualityMode;
       onProgress?.({
         stage: 'downloading',
         percent: 15,
@@ -111,6 +134,7 @@ export async function separateAudioWithDemucs(
 
       processorInstance = new DemucsProcessor({
         ort,
+        overlap: preset.overlap, // Quality/speed trade-off
         onProgress: (info: any) => {
           const percent = 40 + (info.progress * 50); // Map 0-1 to 40-90
           onProgress?.({

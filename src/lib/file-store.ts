@@ -8,7 +8,7 @@
  * - Audio Analysis
  * - Batch Processing
  *
- * Notes from transcription can be sent to Piano Roll.
+ * Notes from transcription can be sent to Note Editor.
  */
 
 import { create } from 'zustand';
@@ -84,7 +84,7 @@ interface FileStoreState {
   lastProcessedFileName: string | null;
   setLastProcessedFileName: (name: string | null) => void;
 
-  // ===== Notes to send to Piano Roll =====
+  // ===== Notes to send to Note Editor =====
   pianoRollNotes: SharedNote[];
   setPianoRollNotes: (notes: SharedNote[]) => void;
   clearPianoRollNotes: () => void;
@@ -161,7 +161,7 @@ export const useFileStore = create<FileStoreState>()(
       lastProcessedFileName: null,
       setLastProcessedFileName: (name) => set({ lastProcessedFileName: name }),
 
-      // ===== Piano Roll notes =====
+      // ===== Note Editor notes =====
       pianoRollNotes: [],
       setPianoRollNotes: (notes) => {
         // console.log('💾 SAVING notes to store:', notes.length);
@@ -231,7 +231,7 @@ export async function sharedAudioFileToFile(sharedFile: SharedAudioFile): Promis
   }
 }
 
-// Helper function to convert notes to the format expected by Piano Roll
+// Helper function to convert notes to the format expected by Note Editor
 export function convertToSharedNotes(notes: any[]): SharedNote[] {
   return notes.map(note => ({
     midi: note.midi || note.pitch || 60,
