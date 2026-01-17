@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
+import { useFileStore } from "@/lib/file-store";
 import { useToast } from "@/hooks/use-toast";
 import {
   FileAudio,
@@ -99,88 +100,36 @@ export default function FilesPage() {
     "all" | "processed" | "unprocessed" | "starred"
   >("all");
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
+  // No mock data - files are populated from user uploads only
+  // Connect to global store
+  const { activeFiles, connectLocalFolder, directoryHandle } = useFileStore();
 
-  // Mock data
-  React.useEffect(() => {
-    const mockFiles: AudioFile[] = [
-      {
-        id: "1",
-        name: "Classical Piano Sonata.mp3",
-        size: 15728640,
-        duration: 245.5,
-        format: "MP3",
+  useEffect(() => {
+    // Sync activeFiles from store to local audioFiles state
+    if (activeFiles.length > 0) {
+      const newAudioFiles: AudioFile[] = activeFiles.map((file, index) => ({
+        id: `file-${file.name}-${file.lastModified}-${index}`,
+        name: file.name,
+        size: file.size,
+        duration: 0, // Metadata processing would happen here
+        format: file.name.split(".").pop()?.toUpperCase() || "UNKNOWN",
         sampleRate: 44100,
         bitDepth: 16,
         channels: 2,
-        uploadDate: new Date("2024-01-15"),
-        lastModified: new Date("2024-01-16"),
-        tags: ["classical", "piano", "sonata"],
-        starred: true,
-        processed: true,
-        transcription: {
-          id: "t1",
-          status: "completed",
-          progress: 100,
-        },
-        stemSeparation: {
-          id: "s1",
-          status: "completed",
-          progress: 100,
-        },
-        analysis: {
-          id: "a1",
-          status: "completed",
-          progress: 100,
-        },
-      },
-      {
-        id: "2",
-        name: "Jazz Guitar Solo.wav",
-        size: 31457280,
-        duration: 180.3,
-        format: "WAV",
-        sampleRate: 48000,
-        bitDepth: 24,
-        channels: 2,
-        uploadDate: new Date("2024-01-14"),
-        lastModified: new Date("2024-01-14"),
-        tags: ["jazz", "guitar", "solo"],
+        uploadDate: new Date(file.lastModified),
+        lastModified: new Date(file.lastModified),
+        tags: [],
         starred: false,
         processed: false,
-        transcription: {
-          id: "t2",
-          status: "processing",
-          progress: 65,
-        },
-      },
-      {
-        id: "3",
-        name: "Electronic Music Production.flac",
-        size: 52428800,
-        duration: 320.7,
-        format: "FLAC",
-        sampleRate: 96000,
-        bitDepth: 24,
-        channels: 2,
-        uploadDate: new Date("2024-01-13"),
-        lastModified: new Date("2024-01-15"),
-        tags: ["electronic", "production", "flac"],
-        starred: false,
-        processed: true,
-        transcription: {
-          id: "t3",
-          status: "completed",
-          progress: 100,
-        },
-        stemSeparation: {
-          id: "s3",
-          status: "pending",
-          progress: 0,
-        },
-      },
-    ];
-    setAudioFiles(mockFiles);
-  }, []);
+      }));
+      setAudioFiles(prev => {
+         // Merge without duplicates
+         const existingIds = prev.map(f => f.id);
+         const uniqueNew = newAudioFiles.filter(f => !existingIds.includes(f.id));
+         return [...prev, ...uniqueNew];
+      });
+    }
+  }, [activeFiles]);
 
   const handleFileUpload = useCallback(
     (files: File[]) => {
@@ -829,10 +778,12 @@ export default function FilesPage() {
               <HardDrive className="h-8 w-8 text-blue-500" />
               <div>
                 <p className="text-sm font-medium">Storage Used</p>
-                <p className="text-lg font-bold">2.4 GB / 10 GB</p>
+                <p className="text-lg font-bold">
+                  {formatFileSize(audioFiles.reduce((acc, file) => acc + file.size, 0))} / 5 GB
+                </p>
               </div>
             </div>
-            <Progress value={24} className="mt-2" />
+            <Progress value={(audioFiles.reduce((acc, file) => acc + file.size, 0) / (5 * 1024 * 1024 * 1024)) * 100} className="mt-2" />
           </CardContent>
         </Card>
 
@@ -856,7 +807,7 @@ export default function FilesPage() {
                 <p className="text-sm font-medium">Processed</p>
                 <p className="text-lg font-bold">
                   {audioFiles.filter((f) => f.processed).length} /{" "}
-                  {audioFiles.length}
+                  {audioFiles.length || 0}
                 </p>
               </div>
             </div>

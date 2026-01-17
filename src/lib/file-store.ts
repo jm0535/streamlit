@@ -71,6 +71,11 @@ interface FileStoreState {
   // Call this to upload files - handles both session state and persistence
   addFiles: (files: File[]) => Promise<void>;
 
+  // ===== Local Folder Connection (File System Access API) =====
+  directoryHandle: FileSystemDirectoryHandle | null;
+  connectLocalFolder: () => Promise<void>;
+  localFiles: File[]; // Files read from the handle
+
   // ===== Actual File objects (session only, not persisted) =====
   activeFiles: File[];
   setActiveFiles: (files: File[]) => void;
@@ -148,10 +153,49 @@ export const useFileStore = create<FileStoreState>()(
         }
       },
 
+      // ===== Local Folder Connection Implementation =====
+      directoryHandle: null,
+      localFiles: [],
+      connectLocalFolder: async () => {
+        try {
+          // @ts-ignore - File System Access API types might be missing in some envs
+          const handle = await window.showDirectoryPicker();
+          const files: File[] = [];
+
+          // Recursive walker could be added here, but flat list for now
+          // @ts-ignore
+          for await (const entry of handle.values()) {
+            if (entry.kind === 'file') {
+              const file = await entry.getFile();
+              if (file.type.startsWith('audio/')) {
+                files.push(file);
+              }
+            }
+          }
+
+          set({
+            directoryHandle: handle,
+            localFiles: files,
+            // Automatically make them active for the session
+            activeFiles: [...get().activeFiles, ...files]
+          });
+
+        } catch (err) {
+          if ((err as Error).name !== 'AbortError') {
+            console.error('Failed to connect folder:', err);
+            throw err;
+          }
+        }
+      },
+
       // ===== Active File objects (session memory, not persisted) =====
       activeFiles: [],
       setActiveFiles: (files) => set({ activeFiles: files }),
       clearActiveFiles: () => set({ activeFiles: [] }),
+
+      // ===== Local Folder State =====
+      directoryHandle: null,
+      localFiles: [],
 
       // ===== Processing state =====
       isProcessing: false,

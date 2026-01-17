@@ -337,6 +337,8 @@ export async function analyzeSoundscape(
   };
 }
 
-export default {
+const acousticIndicesService = {
   analyzeSoundscape,
 };
+
+export default acousticIndicesService;

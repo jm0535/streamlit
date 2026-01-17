@@ -146,7 +146,7 @@ export default function HelpPage() {
   const [expandedArticles, setExpandedArticles] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Mock data
+  // Static Content (Articles, Tutorials, FAQ)
   const [articles] = useState<HelpArticle[]>([
     {
       id: '1',
@@ -377,30 +377,7 @@ Effective collaboration is key to successful music research projects. This guide
     }
   ]);
 
-  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([
-    {
-      id: '1',
-      subject: 'Transcription quality issues',
-      description: 'The transcription results seem to have poor accuracy for my audio files.',
-      status: 'in-progress',
-      priority: 'medium',
-      category: 'transcription',
-      createdAt: new Date('2024-01-19T10:30:00'),
-      updatedAt: new Date('2024-01-20T09:15:00'),
-      responses: 2
-    },
-    {
-      id: '2',
-      subject: 'Cannot upload large files',
-      description: 'I\'m trying to upload a 500MB audio file but it keeps failing.',
-      status: 'resolved',
-      priority: 'high',
-      category: 'technical',
-      createdAt: new Date('2024-01-18T14:20:00'),
-      updatedAt: new Date('2024-01-19T11:30:00'),
-      responses: 3
-    }
-  ]);
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
 
   const [newTicket, setNewTicket] = useState({
     subject: '',
@@ -452,7 +429,7 @@ Effective collaboration is key to successful music research projects. This guide
 
     setSupportTickets(prev => [ticket, ...prev]);
     setNewTicket({ subject: '', description: '', category: 'general', priority: 'medium' });
-    
+
     toast({
       title: "Support ticket created",
       description: "We'll respond to your request within 24 hours",
@@ -461,19 +438,19 @@ Effective collaboration is key to successful music research projects. This guide
 
   const getFilteredArticles = useCallback(() => {
     let filtered = articles;
-    
+
     if (searchQuery) {
-      filtered = filtered.filter(article => 
+      filtered = filtered.filter(article =>
         article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         article.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         article.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
-    
+
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(article => article.category === selectedCategory);
     }
-    
+
     return filtered;
   }, [articles, searchQuery, selectedCategory]);
 
@@ -706,7 +683,7 @@ Effective collaboration is key to successful music research projects. This guide
                                 expandedArticles.has(article.id) ? 'rotate-180' : ''
                               }`} />
                             </div>
-                            
+
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <h4 className="font-medium">{article.title}</h4>

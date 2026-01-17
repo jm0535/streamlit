@@ -682,8 +682,16 @@ export default function StemSeparationPage() {
   const exportStem = useCallback(
     (stem: StemTrack, fileName: string) => {
       // Simulate stem export
-      const blob = new Blob(["mock-audio-data"], { type: "audio/wav" });
-      const url = URL.createObjectURL(blob);
+      if (!stem.blob) {
+        toast({
+            title: "Export failed",
+            description: "No audio data available for this stem",
+            variant: "destructive"
+        });
+        return;
+      }
+
+      const url = URL.createObjectURL(stem.blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `${fileName.replace(

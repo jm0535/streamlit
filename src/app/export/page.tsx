@@ -89,7 +89,7 @@ export default function ExportPage() {
   const [exportJobs, setExportJobs] = useState<ExportJob[]>([]);
   const [currentTab, setCurrentTab] = useState('quick');
   const [isCreatingExport, setIsCreatingExport] = useState(false);
-  
+
   // Export settings
   const [exportSettings, setExportSettings] = useState({
     format: 'midi',
@@ -100,48 +100,8 @@ export default function ExportPage() {
     destination: 'local'
   });
 
-  // Mock data
-  React.useEffect(() => {
-    const mockJobs: ExportJob[] = [
-      {
-        id: '1',
-        name: 'Classical Piano Collection',
-        type: 'transcription',
-        status: 'completed',
-        progress: 100,
-        files: 5,
-        format: 'MIDI',
-        destination: 'local',
-        createdAt: new Date('2024-01-15T10:30:00'),
-        completedAt: new Date('2024-01-15T10:35:00'),
-        size: 245760,
-        downloadUrl: '/downloads/classical-piano.zip'
-      },
-      {
-        id: '2',
-        name: 'Jazz Guitar Stems',
-        type: 'stems',
-        status: 'processing',
-        progress: 65,
-        files: 8,
-        format: 'WAV',
-        destination: 'cloud',
-        createdAt: new Date('2024-01-15T11:00:00')
-      },
-      {
-        id: '3',
-        name: 'Audio Analysis Report',
-        type: 'analysis',
-        status: 'error',
-        progress: 25,
-        files: 3,
-        format: 'JSON',
-        destination: 'local',
-        createdAt: new Date('2024-01-15T09:45:00')
-      }
-    ];
-    setExportJobs(mockJobs);
-  }, []);
+  // No mock data - export jobs are populated from actual user exports only
+  // TODO: Persist export history to Supabase or IndexedDB
 
   const handleCreateExport = useCallback(async (type: 'transcription' | 'stems' | 'analysis' | 'batch') => {
     if (selectedFiles.length === 0 && type !== 'batch') {
@@ -154,7 +114,7 @@ export default function ExportPage() {
     }
 
     setIsCreatingExport(true);
-    
+
     // Create new export job
     const newJob: ExportJob = {
       id: `job-${Date.now()}`,
@@ -172,11 +132,11 @@ export default function ExportPage() {
 
     // Simulate processing
     setTimeout(() => {
-      setExportJobs(prev => prev.map(job => 
-        job.id === newJob.id 
-          ? { 
-              ...job, 
-              status: 'completed' as const, 
+      setExportJobs(prev => prev.map(job =>
+        job.id === newJob.id
+          ? {
+              ...job,
+              status: 'completed' as const,
               progress: 100,
               completedAt: new Date(),
               size: Math.floor(Math.random() * 1000000) + 100000,
@@ -184,12 +144,12 @@ export default function ExportPage() {
             }
           : job
       ));
-      
+
       toast({
         title: "Export completed",
         description: `${newJob.name} is ready for download`,
       });
-      
+
       setIsCreatingExport(false);
     }, 3000);
 
@@ -201,8 +161,8 @@ export default function ExportPage() {
         clearInterval(interval);
         progress = 65;
       }
-      
-      setExportJobs(prev => prev.map(job => 
+
+      setExportJobs(prev => prev.map(job =>
         job.id === newJob.id ? { ...job, progress } : job
       ));
     }, 500);
@@ -231,12 +191,12 @@ export default function ExportPage() {
   }, [toast]);
 
   const handleRetryJob = useCallback((jobId: string) => {
-    setExportJobs(prev => prev.map(job => 
-      job.id === jobId 
+    setExportJobs(prev => prev.map(job =>
+      job.id === jobId
         ? { ...job, status: 'processing' as const, progress: 0 }
         : job
     ));
-    
+
     toast({
       title: "Export retried",
       description: "Restarting export job",
@@ -444,7 +404,7 @@ export default function ExportPage() {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         {getStatusIcon(job.status)}
@@ -488,7 +448,7 @@ export default function ExportPage() {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="format">Export Format</Label>
-                  <Select value={exportSettings.format} onValueChange={(value) => 
+                  <Select value={exportSettings.format} onValueChange={(value) =>
                     setExportSettings(prev => ({ ...prev, format: value }))
                   }>
                     <SelectTrigger>
@@ -508,7 +468,7 @@ export default function ExportPage() {
 
                 <div>
                   <Label htmlFor="quality">Quality</Label>
-                  <Select value={exportSettings.quality} onValueChange={(value: 'low' | 'medium' | 'high') => 
+                  <Select value={exportSettings.quality} onValueChange={(value: 'low' | 'medium' | 'high') =>
                     setExportSettings(prev => ({ ...prev, quality: value }))
                   }>
                     <SelectTrigger>
@@ -524,7 +484,7 @@ export default function ExportPage() {
 
                 <div>
                   <Label htmlFor="compression">Compression</Label>
-                  <Select value={exportSettings.compression} onValueChange={(value: 'none' | 'zip' | 'tar') => 
+                  <Select value={exportSettings.compression} onValueChange={(value: 'none' | 'zip' | 'tar') =>
                     setExportSettings(prev => ({ ...prev, compression: value }))
                   }>
                     <SelectTrigger>
@@ -540,7 +500,7 @@ export default function ExportPage() {
 
                 <div>
                   <Label htmlFor="destination">Destination</Label>
-                  <Select value={exportSettings.destination} onValueChange={(value) => 
+                  <Select value={exportSettings.destination} onValueChange={(value) =>
                     setExportSettings(prev => ({ ...prev, destination: value }))
                   }>
                     <SelectTrigger>
@@ -560,7 +520,7 @@ export default function ExportPage() {
                     <Switch
                       id="metadata"
                       checked={exportSettings.includeMetadata}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         setExportSettings(prev => ({ ...prev, includeMetadata: checked }))
                       }
                     />
@@ -570,7 +530,7 @@ export default function ExportPage() {
                     <Switch
                       id="audio"
                       checked={exportSettings.includeAudio}
-                      onCheckedChange={(checked) => 
+                      onCheckedChange={(checked) =>
                         setExportSettings(prev => ({ ...prev, includeAudio: checked }))
                       }
                     />
@@ -599,7 +559,7 @@ export default function ExportPage() {
                       Browse
                     </Button>
                   </div>
-                  
+
                   <div className="text-sm text-muted-foreground">
                     {selectedFiles.length} file(s) selected
                   </div>
@@ -612,8 +572,8 @@ export default function ExportPage() {
                     </div>
                   </div>
 
-                  <Button 
-                    className="w-full" 
+                  <Button
+                    className="w-full"
                     onClick={() => handleCreateExport('transcription')}
                     disabled={isCreatingExport}
                   >
@@ -716,7 +676,7 @@ export default function ExportPage() {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         {getStatusIcon(job.status)}
@@ -762,7 +722,7 @@ export default function ExportPage() {
                             Duplicate Settings
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => handleDeleteJob(job.id)}
                           >

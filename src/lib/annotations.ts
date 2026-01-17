@@ -383,7 +383,7 @@ export function getAnnotationStats(annotations: Annotation[]): Record<string, nu
   return stats;
 }
 
-export default {
+const annotationsService = {
   createAnnotation,
   createAnnotationProject,
   formatTime,
@@ -398,3 +398,5 @@ export default {
   getAnnotationStats,
   CATEGORY_COLORS,
 };
+
+export default annotationsService;

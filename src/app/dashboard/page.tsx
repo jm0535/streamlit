@@ -38,7 +38,7 @@ export default function Dashboard() {
   const [isNavigating, setIsNavigating] = useState(false);
 
   // Zustand store for persisting files
-  const { addFiles } = useFileStore();
+  const { addFiles, connectLocalFolder, directoryHandle } = useFileStore();
 
   useEffect(() => {
     // Preload audio assets for instant playback experience later
@@ -145,15 +145,45 @@ export default function Dashboard() {
             Quick Start
           </CardTitle>
           <CardDescription>
-            Drop files here to start transcription immediately
+            Seamlessly access your audio files
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <AudioFileUpload
-            files={uploadedFiles}
-            onFilesChange={handleFilesChange}
-            maxFiles={10}
-          />
+        <CardContent className="space-y-6">
+          <div className="flex flex-col md:flex-row gap-4">
+             {/* Option 1: Drag & Drop (Browser Storage) */}
+            <div className="flex-1">
+               <h3 className="text-sm font-medium mb-2">Option 1: Upload Files (Browser Storage)</h3>
+               <AudioFileUpload
+                files={uploadedFiles}
+                onFilesChange={handleFilesChange}
+                maxFiles={10}
+              />
+            </div>
+
+             {/* Vertical Separator */}
+            <div className="hidden md:block w-px bg-border"></div>
+
+             {/* Option 2: Connect Folder (Local Access) */}
+            <div className="flex-1">
+              <h3 className="text-sm font-medium mb-2">Option 2: Connect Local Folder (Live Sync)</h3>
+              <div className="h-full rounded-lg border-2 border-dashed border-primary/20 bg-primary/5 p-6 flex flex-col items-center justify-center text-center space-y-4">
+                <FolderOpen className="h-10 w-10 text-primary" />
+                <div>
+                   <h4 className="font-semibold text-primary">Connect Workspace</h4>
+                   <p className="text-sm text-muted-foreground mt-1">
+                     Grant access to a local folder to edit files in your DAW and see updates instantly.
+                   </p>
+                </div>
+                <Button onClick={connectLocalFolder} className="w-full max-w-[200px]" variant="outline">
+                   {directoryHandle ? 'Folder Connected' : 'Connect Folder'}
+                </Button>
+                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Shield className="h-3 w-3" />
+                  <span>Your files stay on your computer</span>
+                </div>
+              </div>
+            </div>
+          </div>
           {uploadedFiles.length > 0 && (
             <div className="space-y-3">
               {/* Selected Files Preview */}

@@ -97,18 +97,28 @@ export default function LoginPage() {
       <SoundWaveBackground className="text-primary/20" />
       <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-background to-background z-0" />
 
-      <Card className="w-full max-w-md relative z-10 border-primary/20 shadow-2xl backdrop-blur-sm bg-background/80">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <Link href="/" className="p-3 rounded-full bg-primary/10 ring-1 ring-primary/20 hover:bg-primary/20 transition-colors">
+      <div className="w-full max-w-md relative z-10">
+        <div className="text-center mb-8">
+          <Link href="/" className="inline-flex items-center gap-2 text-white hover:text-purple-300 transition-colors mb-4">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Home
+          </Link>
+          <div className="flex items-center justify-center gap-3 mb-4">
+             <Link href="/" className="p-3 rounded-full bg-primary/10 ring-1 ring-primary/20 hover:bg-primary/20 transition-colors">
               <Music2 className="h-8 w-8 text-primary" />
             </Link>
           </div>
-          <CardTitle className="text-2xl font-bold">Streamlit Audio Research Platform</CardTitle>
-          <CardDescription>
-            Sign in to access your research projects
-          </CardDescription>
-        </CardHeader>
+          <h1 className="text-3xl font-bold text-white">Welcome Back</h1>
+          <p className="text-slate-400 mt-2">Sign in to access your research projects</p>
+        </div>
+
+        <Card className="border-primary/20 shadow-2xl backdrop-blur-sm bg-background/80">
+           <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-bold">Streamlit Audio Research Platform</CardTitle>
+            <CardDescription>
+              Enter your credentials to continue
+            </CardDescription>
+          </CardHeader>
           <CardContent className="space-y-4">
             <form onSubmit={handleEmailLogin} className="space-y-4">
               <div className="space-y-2">
@@ -175,6 +185,7 @@ export default function LoginPage() {
             </p>
           </CardFooter>
       </Card>
+      </div>
     </div>
   );
 }
