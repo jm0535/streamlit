@@ -458,7 +458,7 @@ export default function TranscriptionPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column - Files & Settings */}
         <div className="space-y-6">
-          {/* Selected Files or Go to Dashboard prompt */}
+          {/* Selected Files or File Selector prompt */}
           {uploadedFiles.length === 0 && results.length === 0 ? (
             <div className="form-container form-container-md">
               <div className="form-section">
@@ -467,17 +467,27 @@ export default function TranscriptionPage() {
                     <FileAudio className="h-5 w-5" />
                     No Audio Files
                   </h2>
-                  <p className="form-section-description">Upload audio files from the Dashboard to start transcription</p>
+                  <p className="form-section-description">Select files from your library to start separation</p>
                 </div>
-                <div className="p-6 text-center">
-                  <Button
-                    onClick={() => router.push('/dashboard')}
-                    variant="default"
-                    size="lg"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Go to Dashboard to Upload Files
-                  </Button>
+                <div className="p-6 text-center space-y-4">
+                  <p className="text-muted-foreground text-sm">
+                    You can either upload new files or select from your dashboard library.
+                  </p>
+                  <div className="flex justify-center gap-3">
+                     <FileSelectorDialog
+                       onFilesSelected={(files) => handleFileUpload(files)}
+                       trigger={
+                         <Button variant="default" size="lg">
+                           <Layers className="h-4 w-4 mr-2" />
+                           Select from Library
+                         </Button>
+                       }
+                     />
+                     <Button variant="outline" size="lg" onClick={() => router.push('/dashboard')}>
+                       <Upload className="h-4 w-4 mr-2" />
+                       Go to Dashboard
+                     </Button>
+                  </div>
                 </div>
               </div>
             </div>

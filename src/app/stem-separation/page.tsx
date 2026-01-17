@@ -59,6 +59,7 @@ import {
 } from "@/components/ui/dialog";
 import { AudioFileUpload } from "@/components/audio-file-upload";
 import { AudioVisualizer } from "@/components/audio-visualizer";
+import { FileSelectorDialog } from "@/components/file-selector-dialog";
 import StemSeparationViewer from "@/components/StemSeparationViewer";
 import { separateAudioWithDemucs, audioBufferToWavBlob, checkBrowserSupport, SeparationProgress, QualityMode } from "@/lib/demucs-service";
 import { useRouter } from "next/navigation";
