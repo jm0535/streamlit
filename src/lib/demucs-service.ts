@@ -2,11 +2,9 @@
 
 /**
  * Demucs Service - ML-based Audio Source Separation
- * Uses demucs-wasm for real stem separation (drums, bass, vocals, other)
+ * Uses demucs-web (ONNX Runtime Web) for real stem separation
+ * Model: htdemucs_embedded.onnx (~172MB) from HuggingFace
  */
-
-// Dynamic import to avoid SSR issues with WASM
-let DemucsModule: any = null;
 
 export interface StemSeparationResult {
   drums: AudioBuffer;
@@ -16,113 +14,152 @@ export interface StemSeparationResult {
 }
 
 export interface SeparationProgress {
-  stage: 'loading' | 'initializing' | 'processing' | 'complete' | 'error';
+  stage: 'loading' | 'downloading' | 'initializing' | 'processing' | 'complete' | 'error';
   percent: number;
   message: string;
 }
 
 type ProgressCallback = (progress: SeparationProgress) => void;
 
-// Model URLs - these will be fetched by the WASM module
-const MODEL_BASE_URL = 'https://bucket.freemusicdemixer.com';
+// HuggingFace public model URL (free, no auth required)
+const MODEL_URL = 'https://huggingface.co/timcsy/demucs-web-onnx/resolve/main/htdemucs_embedded.onnx';
+
+// Cached processor instance
+let processorInstance: any = null;
+let isModelLoaded = false;
 
 /**
- * Initialize the Demucs WASM module
- */
-async function initDemucs(onProgress?: ProgressCallback): Promise<void> {
-  if (DemucsModule) return;
-
-  onProgress?.({
-    stage: 'loading',
-    percent: 5,
-    message: 'Loading Demucs ML engine...'
-  });
-
-  try {
-    // Dynamic import of demucs-wasm
-    const demucsWasm = await import('demucs-wasm');
-    DemucsModule = demucsWasm;
-
-    onProgress?.({
-      stage: 'initializing',
-      percent: 15,
-      message: 'Initializing ML model (first time may take longer)...'
-    });
-
-  } catch (error) {
-    console.error('Failed to load Demucs WASM:', error);
-    throw new Error('Failed to load ML separation engine. Please ensure your browser supports WebAssembly.');
-  }
-}
-
-/**
- * Convert Float32Array to AudioBuffer
+ * Convert Float32Array stereo to AudioBuffer
  */
 function floatArrayToAudioBuffer(
-  data: Float32Array[],
+  left: Float32Array,
+  right: Float32Array,
   sampleRate: number
 ): AudioBuffer {
   const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-  const numChannels = data.length;
-  const length = data[0].length;
+  const length = left.length;
 
-  const buffer = audioContext.createBuffer(numChannels, length, sampleRate);
-  for (let channel = 0; channel < numChannels; channel++) {
-    // Create a new Float32Array from the data to ensure correct ArrayBuffer type
-    buffer.copyToChannel(new Float32Array(data[channel]), channel);
-  }
+  const buffer = audioContext.createBuffer(2, length, sampleRate);
+  buffer.copyToChannel(new Float32Array(left), 0);
+  buffer.copyToChannel(new Float32Array(right), 1);
 
   audioContext.close();
   return buffer;
 }
 
 /**
- * Main function to separate audio into stems using Demucs ML
+ * Main function to separate audio into stems using Demucs ONNX
  */
 export async function separateAudioWithDemucs(
   audioBuffer: AudioBuffer,
   onProgress?: ProgressCallback
 ): Promise<StemSeparationResult> {
-  // Initialize if needed
-  await initDemucs(onProgress);
 
   onProgress?.({
-    stage: 'processing',
-    percent: 20,
-    message: 'Preparing audio for ML processing...'
+    stage: 'loading',
+    percent: 5,
+    message: 'Loading ONNX Runtime...'
   });
 
   try {
-    // Get audio data from buffer
-    const numChannels = audioBuffer.numberOfChannels;
-    const sampleRate = audioBuffer.sampleRate;
-    const length = audioBuffer.length;
+    // Dynamic imports to avoid SSR issues
+    const ort = await import('onnxruntime-web');
+    const { DemucsProcessor } = await import('demucs-web');
 
-    // Create interleaved audio data for Demucs
+    // Get audio data
+    const sampleRate = audioBuffer.sampleRate;
     const leftChannel = audioBuffer.getChannelData(0);
-    const rightChannel = numChannels > 1 ? audioBuffer.getChannelData(1) : leftChannel;
+    const rightChannel = audioBuffer.numberOfChannels > 1
+      ? audioBuffer.getChannelData(1)
+      : audioBuffer.getChannelData(0);
+
+    // Resample to 44100Hz if needed (Demucs requires 44100Hz)
+    let processLeft = leftChannel;
+    let processRight = rightChannel;
+
+    if (sampleRate !== 44100) {
+      onProgress?.({
+        stage: 'initializing',
+        percent: 10,
+        message: `Resampling from ${sampleRate}Hz to 44100Hz...`
+      });
+
+      // Simple linear interpolation resampling
+      const ratio = 44100 / sampleRate;
+      const newLength = Math.floor(leftChannel.length * ratio);
+      processLeft = new Float32Array(newLength);
+      processRight = new Float32Array(newLength);
+
+      for (let i = 0; i < newLength; i++) {
+        const srcIndex = i / ratio;
+        const srcIndexFloor = Math.floor(srcIndex);
+        const srcIndexCeil = Math.min(srcIndexFloor + 1, leftChannel.length - 1);
+        const t = srcIndex - srcIndexFloor;
+
+        processLeft[i] = leftChannel[srcIndexFloor] * (1 - t) + leftChannel[srcIndexCeil] * t;
+        processRight[i] = rightChannel[srcIndexFloor] * (1 - t) + rightChannel[srcIndexCeil] * t;
+      }
+    }
+
+    // Create or reuse processor
+    if (!processorInstance) {
+      onProgress?.({
+        stage: 'downloading',
+        percent: 15,
+        message: 'Downloading ML model (~172MB, first time only)...'
+      });
+
+      processorInstance = new DemucsProcessor({
+        ort,
+        onProgress: (info: any) => {
+          const percent = 40 + (info.progress * 50); // Map 0-1 to 40-90
+          onProgress?.({
+            stage: 'processing',
+            percent,
+            message: `Separating stems: ${Math.round(info.progress * 100)}% (segment ${info.currentSegment}/${info.totalSegments})`
+          });
+        },
+        onLog: (phase: string, message: string) => {
+          console.log(`[Demucs][${phase}] ${message}`);
+        },
+        onDownloadProgress: (loaded: number, total: number) => {
+          const percent = 15 + ((loaded / total) * 20); // Map to 15-35
+          const loadedMB = (loaded / 1024 / 1024).toFixed(1);
+          const totalMB = (total / 1024 / 1024).toFixed(1);
+          onProgress?.({
+            stage: 'downloading',
+            percent,
+            message: `Downloading model: ${loadedMB}MB / ${totalMB}MB`
+          });
+        },
+        sessionOptions: {
+          // Reduce memory usage
+          enableCpuMemArena: false,
+          enableMemPattern: false,
+        }
+      });
+    }
+
+    // Load model if not already loaded
+    if (!isModelLoaded) {
+      onProgress?.({
+        stage: 'initializing',
+        percent: 35,
+        message: 'Initializing ML model (this may take a moment)...'
+      });
+
+      await processorInstance.loadModel(MODEL_URL);
+      isModelLoaded = true;
+    }
 
     onProgress?.({
       stage: 'processing',
-      percent: 30,
-      message: 'Running ML source separation (this may take a minute)...'
+      percent: 40,
+      message: 'Starting stem separation...'
     });
 
-    // Call Demucs separation
-    // The demucs-wasm API may vary - this is based on common patterns
-    const result = await DemucsModule.separate({
-      left: leftChannel,
-      right: rightChannel,
-      sampleRate: sampleRate,
-      model: 'htdemucs',
-      onProgress: (progress: number) => {
-        onProgress?.({
-          stage: 'processing',
-          percent: 30 + (progress * 0.6), // Map 0-100 to 30-90
-          message: `Separating stems: ${Math.round(progress)}%`
-        });
-      }
-    });
+    // Perform separation
+    const result = await processorInstance.separate(processLeft, processRight);
 
     onProgress?.({
       stage: 'processing',
@@ -130,12 +167,14 @@ export async function separateAudioWithDemucs(
       message: 'Finalizing separated stems...'
     });
 
-    // Convert results to AudioBuffers
+    // Convert results to AudioBuffers (at original sample rate for compatibility)
+    const outputSampleRate = 44100;
+
     const stems: StemSeparationResult = {
-      drums: floatArrayToAudioBuffer([result.drums.left, result.drums.right], sampleRate),
-      bass: floatArrayToAudioBuffer([result.bass.left, result.bass.right], sampleRate),
-      vocals: floatArrayToAudioBuffer([result.vocals.left, result.vocals.right], sampleRate),
-      other: floatArrayToAudioBuffer([result.other.left, result.other.right], sampleRate),
+      drums: floatArrayToAudioBuffer(result.drums.left, result.drums.right, outputSampleRate),
+      bass: floatArrayToAudioBuffer(result.bass.left, result.bass.right, outputSampleRate),
+      vocals: floatArrayToAudioBuffer(result.vocals.left, result.vocals.right, outputSampleRate),
+      other: floatArrayToAudioBuffer(result.other.left, result.other.right, outputSampleRate),
     };
 
     onProgress?.({
@@ -184,8 +223,8 @@ export function audioBufferToWavBlob(buffer: AudioBuffer): Blob {
   view.setUint32(4, totalLength - 8, true);
   writeString(8, 'WAVE');
   writeString(12, 'fmt ');
-  view.setUint32(16, 16, true); // fmt chunk size
-  view.setUint16(20, 1, true); // PCM format
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
   view.setUint16(22, numChannels, true);
   view.setUint32(24, sampleRate, true);
   view.setUint32(28, sampleRate * numChannels * bytesPerSample, true);
@@ -194,7 +233,6 @@ export function audioBufferToWavBlob(buffer: AudioBuffer): Blob {
   writeString(36, 'data');
   view.setUint32(40, dataLength, true);
 
-  // Interleave channels and write samples
   let offset = headerLength;
   const channels: Float32Array[] = [];
   for (let ch = 0; ch < numChannels; ch++) {
@@ -214,14 +252,14 @@ export function audioBufferToWavBlob(buffer: AudioBuffer): Blob {
 }
 
 /**
- * Check if the browser supports the required features for Demucs
+ * Check if the browser supports the required features
  */
 export function checkBrowserSupport(): { supported: boolean; message: string } {
   // Check for SharedArrayBuffer (required for WASM threading)
   if (typeof SharedArrayBuffer === 'undefined') {
     return {
       supported: false,
-      message: 'Your browser does not support SharedArrayBuffer. Please use Chrome, Edge, or Firefox with proper CORS headers.'
+      message: 'Your browser does not support SharedArrayBuffer. Please use Chrome, Edge, or Firefox.'
     };
   }
 
@@ -237,4 +275,48 @@ export function checkBrowserSupport(): { supported: boolean; message: string } {
     supported: true,
     message: 'Browser supports ML-based stem separation.'
   };
+}
+
+/**
+ * Pre-download the model to cache it
+ */
+export async function preloadModel(onProgress?: ProgressCallback): Promise<void> {
+  try {
+    const ort = await import('onnxruntime-web');
+    const { DemucsProcessor } = await import('demucs-web');
+
+    if (!processorInstance) {
+      processorInstance = new DemucsProcessor({
+        ort,
+        onDownloadProgress: (loaded: number, total: number) => {
+          const percent = (loaded / total) * 100;
+          const loadedMB = (loaded / 1024 / 1024).toFixed(1);
+          const totalMB = (total / 1024 / 1024).toFixed(1);
+          onProgress?.({
+            stage: 'downloading',
+            percent,
+            message: `Downloading model: ${loadedMB}MB / ${totalMB}MB`
+          });
+        },
+        sessionOptions: {
+          enableCpuMemArena: false,
+          enableMemPattern: false,
+        }
+      });
+    }
+
+    if (!isModelLoaded) {
+      await processorInstance.loadModel(MODEL_URL);
+      isModelLoaded = true;
+    }
+
+    onProgress?.({
+      stage: 'complete',
+      percent: 100,
+      message: 'Model ready!'
+    });
+  } catch (error) {
+    console.error('Failed to preload model:', error);
+    throw error;
+  }
 }

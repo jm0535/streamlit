@@ -64,6 +64,7 @@ interface FileStoreState {
   sharedAudioFiles: SharedAudioFile[];
   setSharedAudioFiles: (files: SharedAudioFile[]) => void;
   addSharedAudioFile: (file: SharedAudioFile) => void;
+  removeSharedAudioFile: (fileName: string) => void;
   clearSharedAudioFiles: () => void;
 
   // ===== Unified add action =====
@@ -111,6 +112,9 @@ export const useFileStore = create<FileStoreState>()(
       setSharedAudioFiles: (files) => set({ sharedAudioFiles: files }),
       addSharedAudioFile: (file) => set((state) => ({
         sharedAudioFiles: [...state.sharedAudioFiles.filter(f => f.name !== file.name), file]
+      })),
+      removeSharedAudioFile: (fileName) => set((state) => ({
+        sharedAudioFiles: state.sharedAudioFiles.filter(f => f.name !== fileName)
       })),
       clearSharedAudioFiles: () => set({ sharedAudioFiles: [] }),
 

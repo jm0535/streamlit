@@ -127,6 +127,22 @@ export default function StemSeparationPage() {
   const [currentPlayingStem, setCurrentPlayingStem] = useState<string | null>(
     null
   );
+  const [selectedFileIndices, setSelectedFileIndices] = useState<Set<number>>(new Set());
+
+  // Progress tracking for UI
+  const [progressInfo, setProgressInfo] = useState<{
+    percent: number;
+    stage: string;
+    message: string;
+    startTime: number | null;
+    eta: string | null;
+  }>({
+    percent: 0,
+    stage: '',
+    message: '',
+    startTime: null,
+    eta: null,
+  });
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -166,13 +182,14 @@ export default function StemSeparationPage() {
     restore();
   }, [toast]);
 
-  const { sharedAudioFiles, activeFiles, addFiles } = useFileStore();
+  const { sharedAudioFiles, activeFiles, addFiles, removeSharedAudioFile, clearSharedAudioFiles } = useFileStore();
 
   useEffect(() => {
     const loadFiles = async () => {
       // 1. Try active in-memory files first (fastest)
       if (activeFiles.length > 0 && uploadedFiles.length === 0) {
         setUploadedFiles(activeFiles);
+        setSelectedFileIndices(new Set(activeFiles.map((_, i) => i))); // Select all by default
         toast({
           title: "Files active",
           description: `${activeFiles.length} file(s) ready for separation`,
@@ -189,6 +206,7 @@ export default function StemSeparationPage() {
         }
         if (files.length > 0) {
           setUploadedFiles(files);
+          setSelectedFileIndices(new Set(files.map((_, i) => i))); // Select all by default
           toast({
             title: "Files loaded",
             description: `${files.length} file(s) loaded from storage`,
@@ -311,6 +329,7 @@ export default function StemSeparationPage() {
       // Don't clear previous results to support persistence
       // setResults([]);
       setSelectedResult(null);
+      setSelectedFileIndices(new Set(files.map((_, i) => i))); // Select all by default
       toast({
         title: "Files uploaded",
         description: `${files.length} file(s) ready for stem separation`,
@@ -318,6 +337,58 @@ export default function StemSeparationPage() {
     },
     [toast]
   );
+
+  // Remove a single file from storage and local state
+  const handleRemoveFile = useCallback((index: number) => {
+    const file = uploadedFiles[index];
+    if (file) {
+      removeSharedAudioFile(file.name);
+      const newFiles = uploadedFiles.filter((_, i) => i !== index);
+      setUploadedFiles(newFiles);
+      // Update selected indices
+      setSelectedFileIndices(prev => {
+        const newSet = new Set<number>();
+        prev.forEach(i => {
+          if (i < index) newSet.add(i);
+          else if (i > index) newSet.add(i - 1);
+        });
+        return newSet;
+      });
+      toast({
+        title: "File removed",
+        description: `${file.name} removed from storage`,
+      });
+    }
+  }, [uploadedFiles, removeSharedAudioFile, toast]);
+
+  // Clear all storage
+  const handleClearAllStorage = useCallback(async () => {
+    if (confirm("Are you sure? This will remove all uploaded files and separation results.")) {
+      clearSharedAudioFiles();
+      await clearStemResults();
+      setUploadedFiles([]);
+      setResults([]);
+      setSelectedResult(null);
+      setSelectedFileIndices(new Set());
+      toast({
+        title: "Storage cleared",
+        description: "All files and results have been removed.",
+      });
+    }
+  }, [clearSharedAudioFiles, toast]);
+
+  // Toggle file selection for processing
+  const toggleFileSelection = useCallback((index: number) => {
+    setSelectedFileIndices(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        newSet.delete(index);
+      } else {
+        newSet.add(index);
+      }
+      return newSet;
+    });
+  }, []);
 
   const startSeparation = useCallback(async () => {
     if (uploadedFiles.length === 0) {
@@ -347,25 +418,63 @@ export default function StemSeparationPage() {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       const audioContext = new AudioContext();
 
-      for (const file of uploadedFiles) {
-        const startTime = performance.now();
+      // Only process selected files
+      const filesToProcess = uploadedFiles.filter((_, idx) => selectedFileIndices.has(idx));
+
+      if (filesToProcess.length === 0) {
+        toast({
+          title: "No files selected",
+          description: "Please select at least one file to process",
+          variant: "destructive",
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      for (const file of filesToProcess) {
+        const fileStartTime = performance.now();
+
+        // Initialize progress
+        setProgressInfo({
+          percent: 0,
+          stage: 'preparing',
+          message: 'Preparing audio for processing...',
+          startTime: Date.now(),
+          eta: null,
+        });
 
         // Decode original audio
         const arrayBuffer = await file.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
 
-        toast({
-          title: "ML Processing Started",
-          description: "Running Demucs AI separation. This may take 30-60 seconds...",
-          duration: 5000,
-        });
-
         // Run ML-based stem separation with Demucs
         const mlStems = await separateAudioWithDemucs(audioBuffer, (progress: SeparationProgress) => {
           console.log(`[Demucs] ${progress.stage}: ${progress.percent}% - ${progress.message}`);
+
+          // Calculate ETA
+          const elapsed = (Date.now() - (progressInfo.startTime || Date.now())) / 1000;
+          let eta: string | null = null;
+
+          if (progress.percent > 5 && progress.percent < 100) {
+            const totalEstimate = (elapsed / progress.percent) * 100;
+            const remaining = totalEstimate - elapsed;
+            if (remaining > 60) {
+              eta = `~${Math.ceil(remaining / 60)} min`;
+            } else if (remaining > 0) {
+              eta = `~${Math.ceil(remaining)} sec`;
+            }
+          }
+
+          setProgressInfo({
+            percent: progress.percent,
+            stage: progress.stage,
+            message: progress.message,
+            startTime: progressInfo.startTime,
+            eta,
+          });
         });
 
-        const processingTime = (performance.now() - startTime) / 1000;
+        const processingTime = (performance.now() - fileStartTime) / 1000;
 
         // Convert ML results to StemTrack format
         // Note: Demucs 4-stem model outputs: drums, bass, vocals, other
@@ -468,8 +577,9 @@ export default function StemSeparationPage() {
       });
     } finally {
       setIsProcessing(false);
+      setProgressInfo({ percent: 0, stage: '', message: '', startTime: null, eta: null });
     }
-  }, [uploadedFiles, toast]);
+  }, [uploadedFiles, selectedFileIndices, toast]);
 
   const handleAnalyzeStem = useCallback(async (stem: StemTrack, fileName: string) => {
     if (!stem.blob) return;
@@ -752,6 +862,31 @@ export default function StemSeparationPage() {
         </div>
       </div>
 
+      {/* Progress Bar - shows during processing */}
+      {isProcessing && (
+        <div className="mb-6 p-4 bg-muted/50 rounded-lg border">
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="font-medium capitalize">{progressInfo.stage || 'Initializing'}</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span className="font-mono">{Math.round(progressInfo.percent)}%</span>
+              {progressInfo.eta && (
+                <span className="text-xs">ETA: {progressInfo.eta}</span>
+              )}
+            </div>
+          </div>
+          <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-primary h-full rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progressInfo.percent}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">{progressInfo.message}</p>
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-4">
         {/* Left Column - Upload & Settings */}
         <div className="space-y-6">
@@ -781,14 +916,49 @@ export default function StemSeparationPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {uploadedFiles.map((file, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-2 bg-muted rounded">
-                      <FileAudio className="h-4 w-4" />
-                      <span className="text-sm truncate flex-1">{file.name}</span>
-                      <span className="text-xs text-muted-foreground">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
-                    </div>
-                  ))}
+                <div className="space-y-3">
+                  {/* File list with checkboxes and remove buttons */}
+                  <div className="space-y-2">
+                    {uploadedFiles.map((file, idx) => (
+                      <div key={idx} className={`flex items-center gap-2 p-2 rounded border transition-colors ${
+                        selectedFileIndices.has(idx) ? 'bg-primary/10 border-primary/30' : 'bg-muted border-transparent'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={selectedFileIndices.has(idx)}
+                          onChange={() => toggleFileSelection(idx)}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <FileAudio className="h-4 w-4 flex-shrink-0" />
+                        <span className="text-sm truncate flex-1">{file.name}</span>
+                        <span className="text-xs text-muted-foreground">{(file.size / (1024 * 1024)).toFixed(2)} MB</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveFile(idx)}
+                          className="h-6 w-6 p-0 hover:bg-destructive/10"
+                          title="Remove file"
+                        >
+                          <Trash2 className="h-3 w-3 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Selection info and clear all button */}
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="text-xs text-muted-foreground">
+                      {selectedFileIndices.size} of {uploadedFiles.length} selected
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearAllStorage}
+                      className="text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Clear All
+                    </Button>
+                  </div>
                 </div>
               )}
             </CardContent>
