@@ -104,9 +104,9 @@ export default function LoginPage() {
               <Music2 className="h-8 w-8 text-primary" />
             </Link>
           </div>
-          <CardTitle className="text-2xl font-bold">Audio Research Platform</CardTitle>
+          <CardTitle className="text-2xl font-bold">Streamlit Audio Research Platform</CardTitle>
           <CardDescription>
-            Sign in to access your projects
+            Sign in to access your research projects
           </CardDescription>
         </CardHeader>
           <CardContent className="space-y-4">

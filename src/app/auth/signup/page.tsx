@@ -127,15 +127,15 @@ export default function SignUpPage() {
               <Music2 className="h-10 w-10 text-purple-400" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-white">Create Account</h1>
-          <p className="text-slate-400 mt-2">Join our audio research platform</p>
+          <h1 className="text-3xl font-bold text-white">Join Streamlit</h1>
+          <p className="text-slate-400 mt-2">Create your audio research account</p>
         </div>
 
         <Card className="border-slate-700 bg-slate-800/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-white">Sign Up</CardTitle>
+            <CardTitle className="text-white">Streamlit Audio Research Platform</CardTitle>
             <CardDescription className="text-slate-400">
-              Create your research account to get started
+              Create your account to start researching
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

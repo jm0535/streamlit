@@ -182,7 +182,7 @@ export function exportToMusicXML(
 
       for (let i = 0; i < measureNotes.length; i++) {
         const note = measureNotes[i];
-        const pitch = midiToPitch(note.pitch);
+        const pitch = midiToPitch(note.midi);
 
         // Add rest if there's a gap
         if (note.startTime > lastEndTime + 0.01) {
