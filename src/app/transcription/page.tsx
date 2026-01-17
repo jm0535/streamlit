@@ -622,9 +622,9 @@ export default function TranscriptionPage() {
                   </div>
                   <Button
                     onClick={() => {
-                      // Convert notes to shared format and navigate to piano roll
+                      // Convert notes to shared format and navigate to Note Editor
                       const sharedNotes = convertToSharedNotes(selectedResult.notes);
-                      console.log('🎵 Sending notes to Piano Roll:', {
+                      console.log('🎵 Sending notes to Note Editor:', {
                         originalCount: selectedResult.notes.length,
                         sharedCount: sharedNotes.length,
                         sharedNotes
@@ -642,7 +642,7 @@ export default function TranscriptionPage() {
                       }
 
                       toast({
-                        title: 'Opening Piano Roll...',
+                        title: 'Opening Note Editor...',
                         description: `Sending ${selectedResult.notes.length} notes to editor`,
                       });
                       router.push('/notes');
@@ -651,7 +651,7 @@ export default function TranscriptionPage() {
                     className="w-full mt-2"
                   >
                     <Piano className="h-4 w-4 mr-2" />
-                    View in Piano Roll
+                    View in Note Editor
                   </Button>
                 </div>
               </div>

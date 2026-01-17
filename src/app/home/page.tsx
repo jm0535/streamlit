@@ -38,7 +38,7 @@ const features = [
   {
     icon: Piano,
     title: 'Score Visualization',
-    description: 'View your music in traditional notation or piano roll with playback',
+    description: 'View your music in traditional notation or note editor with playback',
     color: 'from-violet-500 to-purple-500',
   },
   {
