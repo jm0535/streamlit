@@ -7,6 +7,7 @@ import { NotesEditor } from '@/components/notes-editor';
 import { AudioFileUpload } from '@/components/audio-file-upload';
 import { Note, createMIDI, downloadMIDIFromNotes } from '@/lib/midi-utils';
 import { exportNotesToPDF } from '@/lib/pdf-export';
+import { downloadMusicXML } from '@/lib/musicxml-export';
 import { loadAndAnalyzeAudio } from '@/lib/audio-analysis';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -212,6 +213,35 @@ export default function NotesPage() {
     }
   }, [notes, fileName, tempo, duration, toast]);
 
+  // Export MusicXML
+  const handleExportMusicXML = useCallback(() => {
+    if (notes.length === 0) {
+      toast({
+        title: 'No notes to export',
+        description: 'Add some notes or upload an audio file first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      downloadMusicXML(notes, fileName || 'composition', {
+        title: fileName || 'Composition',
+        tempo,
+      });
+      toast({
+        title: 'MusicXML exported!',
+        description: 'Open in MuseScore, Sibelius, or Finale',
+      });
+    } catch (error) {
+      toast({
+        title: 'Export failed',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  }, [notes, fileName, tempo, toast]);
+
   // Handle notes change from note editor
   const handleNotesChange = useCallback((newNotes: Note[]) => {
     setNotes(newNotes);
@@ -309,6 +339,10 @@ export default function NotesPage() {
                 <Button onClick={handleExportPDF} variant="outline" disabled={notes.length === 0}>
                   <FileText className="h-4 w-4 mr-2" />
                   Export PDF
+                </Button>
+                <Button onClick={handleExportMusicXML} variant="outline" disabled={notes.length === 0}>
+                  <Music className="h-4 w-4 mr-2" />
+                  Export MusicXML
                 </Button>
               </div>
             </CardContent>

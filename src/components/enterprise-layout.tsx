@@ -33,6 +33,9 @@ import {
   PlayCircle,
   Piano,
   Shield,
+  Globe,
+  TreePine,
+  Languages,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useAuth } from "@/contexts/AuthContext";
@@ -188,6 +191,29 @@ const sidebarSections: SidebarSection[] = [
         href: "/audio-analysis",
         icon: BarChart3,
         description: "Detailed frequency analysis",
+      },
+    ],
+  },
+  {
+    title: "Research",
+    items: [
+      {
+        title: "Ethnomusicology",
+        href: "/ethnomusicology",
+        icon: Globe,
+        description: "Microtonal analysis & cultural scales",
+      },
+      {
+        title: "Sound Ecology",
+        href: "/sound-ecology",
+        icon: TreePine,
+        description: "Acoustic indices & soundscape analysis",
+      },
+      {
+        title: "Linguistics",
+        href: "/linguistics",
+        icon: Languages,
+        description: "Phonetic & prosodic analysis",
       },
     ],
   },

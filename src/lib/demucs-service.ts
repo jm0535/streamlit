@@ -24,10 +24,9 @@ type ProgressCallback = (progress: SeparationProgress) => void;
 // HuggingFace public model URL (free, no auth required)
 const MODEL_URL = 'https://huggingface.co/timcsy/demucs-web-onnx/resolve/main/htdemucs_embedded.onnx';
 
-// Cached processor instance
-let processorInstance: any = null;
-let isModelLoaded = false;
-let currentProcessorQuality: QualityMode | null = null;
+
+// Quality modes for speed/quality trade-off
+export type QualityMode = 'fast' | 'balanced' | 'quality';
 
 /**
  * Convert Float32Array stereo to AudioBuffer
@@ -48,18 +47,24 @@ function floatArrayToAudioBuffer(
   return buffer;
 }
 
-// Quality modes for speed/quality trade-off
-export type QualityMode = 'fast' | 'balanced' | 'quality';
-
-// Quality presets affect overlap and processing
-const QUALITY_PRESETS = {
-  fast: { overlap: 0.05, description: 'Fast (~2x faster, lower quality)' },
-  balanced: { overlap: 0.15, description: 'Balanced (default)' },
-  quality: { overlap: 0.25, description: 'High Quality (slower, best results)' },
-};
+// Worker instance
+let demucsWorker: Worker | null = null;
+let currentWorkerQuality: QualityMode | null = null;
 
 /**
- * Main function to separate audio into stems using Demucs ONNX
+ * Initialize Web Worker
+ */
+function getWorker(): Worker {
+  if (!demucsWorker) {
+    // Initialize worker
+    demucsWorker = new Worker(new URL('./demucs.worker.ts', import.meta.url));
+    console.log('[DemucsService] Worker initialized');
+  }
+  return demucsWorker;
+}
+
+/**
+ * Main function to separate audio into stems using Demucs ONNX via Web Worker
  */
 export async function separateAudioWithDemucs(
   audioBuffer: AudioBuffer,
@@ -67,157 +72,76 @@ export async function separateAudioWithDemucs(
   qualityMode: QualityMode = 'balanced'
 ): Promise<StemSeparationResult> {
 
-  const preset = QUALITY_PRESETS[qualityMode];
-  console.log(`[Demucs] Using ${qualityMode} mode (overlap: ${preset.overlap})`);
+  console.log(`[DemucsService] Starting separation in ${qualityMode} mode`);
+  const worker = getWorker();
 
-  onProgress?.({
-    stage: 'loading',
-    percent: 5,
-    message: 'Loading ONNX Runtime...'
-  });
+  // Reset worker if quality changed (though worker handles this internally too,
+  // we might want to terminate/recreate if we wanted a hard reset, but
+  // sending the mode is enough for now)
 
-  try {
-    // Dynamic imports to avoid SSR issues
-    const ort = await import('onnxruntime-web');
-    const { DemucsProcessor } = await import('demucs-web');
+  return new Promise((resolve, reject) => {
+    // Handle messages from worker
+    worker.onmessage = (e) => {
+      const msg = e.data;
 
-    // Get audio data
-    const sampleRate = audioBuffer.sampleRate;
+      if (msg.type === 'progress') {
+        onProgress?.({
+          stage: msg.stage,
+          percent: msg.percent,
+          message: msg.message
+        });
+      } else if (msg.type === 'complete') {
+        onProgress?.({
+          stage: 'complete',
+          percent: 100,
+          message: 'Separation complete!'
+        });
+
+        // Convert raw Float32Arrays back to AudioBuffers
+        const { drums, bass, vocals, other } = msg.result;
+        const outputSampleRate = 44100;
+
+        const result: StemSeparationResult = {
+          drums: floatArrayToAudioBuffer(drums.left, drums.right, outputSampleRate),
+          bass: floatArrayToAudioBuffer(bass.left, bass.right, outputSampleRate),
+          vocals: floatArrayToAudioBuffer(vocals.left, vocals.right, outputSampleRate),
+          other: floatArrayToAudioBuffer(other.left, other.right, outputSampleRate),
+        };
+
+        resolve(result);
+      } else if (msg.type === 'error') {
+        reject(new Error(msg.message));
+      }
+    };
+
+    worker.onerror = (err) => {
+      console.error('[DemucsService] Worker error:', err);
+      reject(new Error('Web Worker error occurred'));
+    };
+
+    // Prepare data for transfer
     const leftChannel = audioBuffer.getChannelData(0);
     const rightChannel = audioBuffer.numberOfChannels > 1
       ? audioBuffer.getChannelData(1)
       : audioBuffer.getChannelData(0);
 
-    // Resample to 44100Hz if needed (Demucs requires 44100Hz)
-    let processLeft = leftChannel;
-    let processRight = rightChannel;
+    // We must copy the data because we can't transfer the AudioBuffer's internal buffers directly consistently
+    // across all browsers without detachment issues if we want to reuse the original buffer?
+    // Actually, getChannelData returns a Float32Array view of the buffer.
+    // To be safe and adhere to "Transferable" zero-copy where possible but preserve original:
+    // We'll make a copy to send to the worker.
+    const leftCopy = new Float32Array(leftChannel);
+    const rightCopy = new Float32Array(rightChannel);
 
-    if (sampleRate !== 44100) {
-      onProgress?.({
-        stage: 'initializing',
-        percent: 10,
-        message: `Resampling from ${sampleRate}Hz to 44100Hz...`
-      });
-
-      // Simple linear interpolation resampling
-      const ratio = 44100 / sampleRate;
-      const newLength = Math.floor(leftChannel.length * ratio);
-      processLeft = new Float32Array(newLength);
-      processRight = new Float32Array(newLength);
-
-      for (let i = 0; i < newLength; i++) {
-        const srcIndex = i / ratio;
-        const srcIndexFloor = Math.floor(srcIndex);
-        const srcIndexCeil = Math.min(srcIndexFloor + 1, leftChannel.length - 1);
-        const t = srcIndex - srcIndexFloor;
-
-        processLeft[i] = leftChannel[srcIndexFloor] * (1 - t) + leftChannel[srcIndexCeil] * t;
-        processRight[i] = rightChannel[srcIndexFloor] * (1 - t) + rightChannel[srcIndexCeil] * t;
-      }
-    }
-
-    // Reset processor if quality mode changed
-    if (processorInstance && currentProcessorQuality !== qualityMode) {
-      console.log(`[Demucs] Quality mode changed from ${currentProcessorQuality} to ${qualityMode}, resetting processor`);
-      processorInstance = null;
-      isModelLoaded = false;
-    }
-
-    // Create or reuse processor
-    if (!processorInstance) {
-      currentProcessorQuality = qualityMode;
-      onProgress?.({
-        stage: 'downloading',
-        percent: 15,
-        message: 'Downloading ML model (~172MB, first time only)...'
-      });
-
-      processorInstance = new DemucsProcessor({
-        ort,
-        overlap: preset.overlap, // Quality/speed trade-off
-        onProgress: (info: any) => {
-          const percent = 40 + (info.progress * 50); // Map 0-1 to 40-90
-          onProgress?.({
-            stage: 'processing',
-            percent,
-            message: `Separating stems: ${Math.round(info.progress * 100)}% (segment ${info.currentSegment}/${info.totalSegments})`
-          });
-        },
-        onLog: (phase: string, message: string) => {
-          console.log(`[Demucs][${phase}] ${message}`);
-        },
-        onDownloadProgress: (loaded: number, total: number) => {
-          const percent = 15 + ((loaded / total) * 20); // Map to 15-35
-          const loadedMB = (loaded / 1024 / 1024).toFixed(1);
-          const totalMB = (total / 1024 / 1024).toFixed(1);
-          onProgress?.({
-            stage: 'downloading',
-            percent,
-            message: `Downloading model: ${loadedMB}MB / ${totalMB}MB`
-          });
-        },
-        sessionOptions: {
-          // Reduce memory usage
-          enableCpuMemArena: false,
-          enableMemPattern: false,
-        }
-      });
-    }
-
-    // Load model if not already loaded
-    if (!isModelLoaded) {
-      onProgress?.({
-        stage: 'initializing',
-        percent: 35,
-        message: 'Initializing ML model (this may take a moment)...'
-      });
-
-      await processorInstance.loadModel(MODEL_URL);
-      isModelLoaded = true;
-    }
-
-    onProgress?.({
-      stage: 'processing',
-      percent: 40,
-      message: 'Starting stem separation...'
-    });
-
-    // Perform separation
-    const result = await processorInstance.separate(processLeft, processRight);
-
-    onProgress?.({
-      stage: 'processing',
-      percent: 95,
-      message: 'Finalizing separated stems...'
-    });
-
-    // Convert results to AudioBuffers (at original sample rate for compatibility)
-    const outputSampleRate = 44100;
-
-    const stems: StemSeparationResult = {
-      drums: floatArrayToAudioBuffer(result.drums.left, result.drums.right, outputSampleRate),
-      bass: floatArrayToAudioBuffer(result.bass.left, result.bass.right, outputSampleRate),
-      vocals: floatArrayToAudioBuffer(result.vocals.left, result.vocals.right, outputSampleRate),
-      other: floatArrayToAudioBuffer(result.other.left, result.other.right, outputSampleRate),
-    };
-
-    onProgress?.({
-      stage: 'complete',
-      percent: 100,
-      message: 'Separation complete!'
-    });
-
-    return stems;
-
-  } catch (error) {
-    console.error('Demucs separation failed:', error);
-    onProgress?.({
-      stage: 'error',
-      percent: 0,
-      message: `Separation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-    });
-    throw error;
-  }
+    // Send start message
+    worker.postMessage({
+      type: 'separate',
+      left: leftCopy,
+      right: rightCopy,
+      sampleRate: audioBuffer.sampleRate,
+      qualityMode
+    }, [leftCopy.buffer, rightCopy.buffer]); // Transfer the copies
+  });
 }
 
 /**
@@ -304,43 +228,41 @@ export function checkBrowserSupport(): { supported: boolean; message: string } {
 /**
  * Pre-download the model to cache it
  */
+/**
+ * Pre-download the model to cache it via Web Worker
+ */
 export async function preloadModel(onProgress?: ProgressCallback): Promise<void> {
-  try {
-    const ort = await import('onnxruntime-web');
-    const { DemucsProcessor } = await import('demucs-web');
+  const worker = getWorker();
 
-    if (!processorInstance) {
-      processorInstance = new DemucsProcessor({
-        ort,
-        onDownloadProgress: (loaded: number, total: number) => {
-          const percent = (loaded / total) * 100;
-          const loadedMB = (loaded / 1024 / 1024).toFixed(1);
-          const totalMB = (total / 1024 / 1024).toFixed(1);
-          onProgress?.({
-            stage: 'downloading',
-            percent,
-            message: `Downloading model: ${loadedMB}MB / ${totalMB}MB`
-          });
-        },
-        sessionOptions: {
-          enableCpuMemArena: false,
-          enableMemPattern: false,
-        }
-      });
-    }
+  return new Promise((resolve, reject) => {
+    // We need a temporary message handler for this preload operation
+    // Note: In a real app with multiple concurrent operations, we'd need meaningful IDs
+    // to route messages. For now, we assume sequential usage or simple overlapping.
 
-    if (!isModelLoaded) {
-      await processorInstance.loadModel(MODEL_URL);
-      isModelLoaded = true;
-    }
+    const handler = (e: MessageEvent) => {
+      const msg = e.data;
 
-    onProgress?.({
-      stage: 'complete',
-      percent: 100,
-      message: 'Model ready!'
-    });
-  } catch (error) {
-    console.error('Failed to preload model:', error);
-    throw error;
-  }
+      if (msg.type === 'progress') {
+        onProgress?.({
+          stage: msg.stage,
+          percent: msg.percent,
+          message: msg.message
+        });
+      } else if (msg.type === 'complete') {
+        worker.removeEventListener('message', handler);
+        onProgress?.({
+          stage: 'complete',
+          percent: 100,
+          message: 'Model ready!'
+        });
+        resolve();
+      } else if (msg.type === 'error') {
+        worker.removeEventListener('message', handler);
+        reject(new Error(msg.message));
+      }
+    };
+
+    worker.addEventListener('message', handler);
+    worker.postMessage({ type: 'preload' });
+  });
 }
