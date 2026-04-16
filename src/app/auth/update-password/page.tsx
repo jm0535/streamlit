@@ -71,13 +71,39 @@ export default function UpdatePasswordPage() {
     setIsSubmitting(true);
 
     try {
-      // Ensure the recovery session is active before updating.
-      // This resolves Supabase's internal lock and prevents AbortErrors
-      // caused by concurrent session operations.
-      await supabase.auth.getSession();
+      // Get the access token from the current recovery session.
+      const { data: { session } } = await supabase.auth.getSession();
 
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) throw error;
+      if (!session?.access_token) {
+        toast({
+          title: 'Session expired',
+          description: 'Please request a new password reset link.',
+          variant: 'destructive',
+        });
+        router.push('/auth/reset-password');
+        return;
+      }
+
+      // Call the Supabase Auth REST API directly instead of using the SDK method.
+      // The SDK's updateUser() triggers internal lock contention with concurrent
+      // auth state listeners (AuthContext), causing "signal is aborted" errors.
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+      const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': supabaseAnonKey,
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || body.error_description || 'Could not update password');
+      }
 
       setIsSuccess(true);
       toast({
@@ -85,7 +111,7 @@ export default function UpdatePasswordPage() {
         description: 'You can now sign in with your new password.',
       });
 
-      setTimeout(() => router.push('/dashboard'), 2000);
+      setTimeout(() => router.push('/auth/login'), 2000);
     } catch (error: any) {
       toast({
         title: 'Update failed',
