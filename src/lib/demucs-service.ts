@@ -56,9 +56,7 @@ let currentWorkerQuality: QualityMode | null = null;
  */
 function getWorker(): Worker {
   if (!demucsWorker) {
-    // Initialize worker
     demucsWorker = new Worker(new URL('./demucs.worker.ts', import.meta.url));
-    console.log('[DemucsService] Worker initialized');
   }
   return demucsWorker;
 }
@@ -72,7 +70,6 @@ export async function separateAudioWithDemucs(
   qualityMode: QualityMode = 'balanced'
 ): Promise<StemSeparationResult> {
 
-  console.log(`[DemucsService] Starting separation in ${qualityMode} mode`);
   const worker = getWorker();
 
   // Reset worker if quality changed (though worker handles this internally too,
@@ -114,8 +111,7 @@ export async function separateAudioWithDemucs(
       }
     };
 
-    worker.onerror = (err) => {
-      console.error('[DemucsService] Worker error:', err);
+    worker.onerror = () => {
       reject(new Error('Web Worker error occurred'));
     };
 

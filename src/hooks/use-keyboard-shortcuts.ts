@@ -42,7 +42,10 @@ export function useKeyboardShortcuts(shortcuts: KeyboardShortcut[]) {
         const keyMatch = event.key.toLowerCase() === shortcut.key.toLowerCase();
         const ctrlMatch = shortcut.ctrl ? event.ctrlKey || event.metaKey : true;
         const metaMatch = shortcut.meta ? event.metaKey : true;
-        const shiftMatch = shortcut.shift ? event.shiftKey : !event.shiftKey || shortcut.shift === undefined;
+        // If shift is explicitly required, shift must be held.
+        // If shift is not specified, shift must NOT be held (prevents Ctrl+Z matching Ctrl+Shift+Z).
+        const shiftMatch = shortcut.shift ? event.shiftKey : !event.shiftKey;
+        // Same logic for alt: if not specified, alt must not be held.
         const altMatch = shortcut.alt ? event.altKey : !event.altKey;
 
         // For shortcuts requiring modifiers, check they're pressed

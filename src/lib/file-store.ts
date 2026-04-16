@@ -272,16 +272,32 @@ export async function sharedAudioFileToFile(sharedFile: SharedAudioFile): Promis
   }
 }
 
+type RawNote = {
+  midi?: number;
+  pitch?: number;
+  name?: string;
+  pitchName?: string;
+  octave?: number;
+  frequency?: number;
+  startTime?: number;
+  duration?: number;
+  velocity?: number;
+  confidence?: number;
+};
+
 // Helper function to convert notes to the format expected by Note Editor
-export function convertToSharedNotes(notes: any[]): SharedNote[] {
-  return notes.map(note => ({
-    midi: note.midi || note.pitch || 60,
-    name: note.name || note.pitchName || 'C4',
-    octave: note.octave || Math.floor((note.midi || 60) / 12) - 1,
-    frequency: note.frequency || 440 * Math.pow(2, ((note.midi || 60) - 69) / 12),
-    startTime: note.startTime || 0,
-    duration: note.duration || 0.25,
-    velocity: note.velocity || 100,
-    confidence: note.confidence || 1,
-  }));
+export function convertToSharedNotes(notes: RawNote[]): SharedNote[] {
+  return notes.map(note => {
+    const midi = note.midi ?? note.pitch ?? 60;
+    return {
+      midi,
+      name: note.name ?? note.pitchName ?? 'C4',
+      octave: note.octave ?? Math.floor(midi / 12) - 1,
+      frequency: note.frequency ?? 440 * Math.pow(2, (midi - 69) / 12),
+      startTime: note.startTime ?? 0,
+      duration: note.duration ?? 0.25,
+      velocity: note.velocity ?? 100,
+      confidence: note.confidence ?? 1,
+    };
+  });
 }

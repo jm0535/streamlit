@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useFileStore } from '@/lib/file-store';
+import { useFileStore, SharedNote } from '@/lib/file-store';
 import { NotesEditor } from '@/components/notes-editor';
 import { AudioFileUpload } from '@/components/audio-file-upload';
 import { Note, createMIDI, downloadMIDIFromNotes } from '@/lib/midi-utils';
@@ -63,7 +63,7 @@ export default function NotesPage() {
 
     if (notesToLoad.length > 0) {
       // Convert to Note type expected by PianoRoll component
-      const convertedNotes: Note[] = notesToLoad.map((n: any) => ({
+      const convertedNotes: Note[] = notesToLoad.map((n: SharedNote) => ({
         midi: n.midi,
         name: n.name,
         octave: n.octave,
@@ -77,8 +77,9 @@ export default function NotesPage() {
       setNotes(convertedNotes);
       setFileName('Stem Analysis Results');
 
-      // Calculate duration based on notes
-      const maxTime = Math.max(...convertedNotes.map(n => n.startTime + n.duration));
+      // Calculate duration based on notes — guard against empty array
+      const endTimes = convertedNotes.map(n => n.startTime + n.duration);
+      const maxTime = endTimes.length > 0 ? Math.max(...endTimes) : 30;
       setDuration(Math.ceil(maxTime) + 5);
 
       toast({

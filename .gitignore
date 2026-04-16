@@ -24,6 +24,9 @@ node_modules
 .DS_Store
 *.pem
 
+# editor history
+.history/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
@@ -47,3 +50,7 @@ test
 prompt
 
 server.log
+
+# local database and uploaded files
+db/*.db
+upload/

@@ -401,8 +401,8 @@ export function audioBufferToWav(buffer: AudioBuffer): Blob {
   const format = 1; // PCM
   const bitDepth = 16;
 
-  let result;
-  if (numChannels === 2) {
+  let result: Float32Array;
+  if (numChannels >= 2) {
     result = interleave(buffer.getChannelData(0), buffer.getChannelData(1));
   } else {
     result = buffer.getChannelData(0);
@@ -412,16 +412,12 @@ export function audioBufferToWav(buffer: AudioBuffer): Blob {
 }
 
 function interleave(inputL: Float32Array, inputR: Float32Array) {
-  const length = inputL.length + inputR.length;
-  const result = new Float32Array(length);
+  const frameCount = Math.min(inputL.length, inputR.length);
+  const result = new Float32Array(frameCount * 2);
 
-  let index = 0;
-  let inputIndex = 0;
-
-  while (index < length) {
-    result[index++] = inputL[inputIndex];
-    result[index++] = inputR[inputIndex];
-    inputIndex++;
+  for (let i = 0; i < frameCount; i++) {
+    result[i * 2] = inputL[i];
+    result[i * 2 + 1] = inputR[i];
   }
   return result;
 }
@@ -757,21 +753,26 @@ export async function analyzeAudio(
 ): Promise<AudioAnalysisResult> {
   const opts = { ...RESEARCH_DEFAULTS, ...options };
 
-  // Select channel(s)
+  // Select channel(s) — guard against mono buffers
+  const numChannels = audioBuffer.numberOfChannels;
   let channelData: Float32Array;
   switch (opts.channelSelection) {
     case 'left':
       channelData = audioBuffer.getChannelData(0);
       break;
     case 'right':
-      channelData = audioBuffer.getChannelData(1);
+      channelData = audioBuffer.getChannelData(numChannels > 1 ? 1 : 0);
       break;
     case 'mix':
-      const left = audioBuffer.getChannelData(0);
-      const right = audioBuffer.getChannelData(1);
-      channelData = new Float32Array(left.length);
-      for (let i = 0; i < left.length; i++) {
-        channelData[i] = (left[i] + right[i]) / 2;
+      if (numChannels > 1) {
+        const left = audioBuffer.getChannelData(0);
+        const right = audioBuffer.getChannelData(1);
+        channelData = new Float32Array(left.length);
+        for (let i = 0; i < left.length; i++) {
+          channelData[i] = (left[i] + right[i]) / 2;
+        }
+      } else {
+        channelData = audioBuffer.getChannelData(0);
       }
       break;
     case 'both':
@@ -949,8 +950,7 @@ export async function decodeAudioFile(file: File): Promise<AudioBuffer> {
   const arrayBuffer = await file.arrayBuffer();
 
   // Create a temporary context just to decode
-  // @ts-ignore - Safari prefix compatibility
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
   const audioContext = new AudioContextClass();
 
   try {

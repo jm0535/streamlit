@@ -243,10 +243,20 @@ export default function AudioAnalysisPage() {
 
     setIsAnalyzing(true);
 
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) {
+      toast({
+        title: "Unsupported browser",
+        description: "Web Audio API is not supported in this browser",
+        variant: "destructive",
+      });
+      setIsAnalyzing(false);
+      return;
+    }
+    const audioContext = new AudioContextClass();
+
     try {
       const newResults: AnalysisResult[] = [];
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      const audioContext = new AudioContext();
 
       for (const file of uploadedFiles) {
         // Decode audio data for real analysis
@@ -263,6 +273,11 @@ export default function AudioAnalysisPage() {
         // Calculate some basic metrics
         const rmsLevel = amplitudeEnvelope.reduce((a, b) => a + b, 0) / amplitudeEnvelope.length;
         const peakLevel = Math.max(...amplitudeEnvelope);
+
+        // Calculate dynamic range safely (avoid divide-by-zero or log(0))
+        const positiveEnvelope = amplitudeEnvelope.filter(v => v > 0.001);
+        const minLevel = positiveEnvelope.length > 0 ? Math.min(...positiveEnvelope) : 0.001;
+        const dynamicRange = peakLevel > 0 ? 20 * Math.log10(peakLevel / minLevel) : 0;
 
         // Convert frequency spectrum to data points for simple harmonic content
         const harmonicContent = frequencySpectrum.slice(0, 50);
@@ -283,7 +298,7 @@ export default function AudioAnalysisPage() {
           amplitudeEnvelope,
           rmsLevel,
           peakLevel,
-          dynamicRange: 20 * Math.log10(peakLevel / (Math.min(...amplitudeEnvelope.filter(v => v > 0.001)) || 0.001)),
+          dynamicRange,
 
           tempo: 120, // Tempo detection placeholder
           keySignature: musicalKey.key,
@@ -325,14 +340,12 @@ export default function AudioAnalysisPage() {
 
       setResults(newResults);
       setSelectedResult(newResults[0]);
-      await audioContext.close();
 
       toast({
         title: "Analysis complete",
         description: "Audio visualization data generated",
       });
     } catch (error) {
-      console.error("Analysis failed:", error);
       toast({
         title: "Analysis error",
         description: "Failed to process audio file",
@@ -340,6 +353,7 @@ export default function AudioAnalysisPage() {
       });
     } finally {
       setIsAnalyzing(false);
+      await audioContext.close();
     }
   }, [uploadedFiles, analysisSettings, toast]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useFileStore, sharedAudioFileToFile } from "@/lib/file-store";
 import {
@@ -105,6 +105,7 @@ export default function BatchProcessingPage() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const abortRef = useRef(false);
 
   // Get pending files from file store (set by Dashboard)
   const { pendingFiles, clearPendingFiles } = useFileStore();
@@ -216,10 +217,11 @@ export default function BatchProcessingPage() {
       return;
     }
 
+    abortRef.current = false;
     setIsProcessing(true);
 
     try {
-      // Process files in batches
+      // Process files in batches respecting maxConcurrent
       const chunks: BatchFile[][] = [];
       for (
         let i = 0;
@@ -230,8 +232,11 @@ export default function BatchProcessingPage() {
       }
 
       for (const chunk of chunks) {
+        if (abortRef.current) break;
+
         const promises = chunk.map(async (batchFile) => {
-          // Update status to processing
+          if (abortRef.current) return;
+
           setBatchFiles((prev) =>
             prev.map((f) =>
               f.id === batchFile.id
@@ -240,15 +245,16 @@ export default function BatchProcessingPage() {
             )
           );
 
-          // Simulate processing
           for (let progress = 0; progress <= 100; progress += 10) {
+            if (abortRef.current) return;
             await new Promise((resolve) => setTimeout(resolve, 200));
             setBatchFiles((prev) =>
               prev.map((f) => (f.id === batchFile.id ? { ...f, progress } : f))
             );
           }
 
-          // Simulate result
+          if (abortRef.current) return;
+
           const result = {
             confidence: Math.random() * 0.2 + 0.8,
             notesCount: Math.floor(Math.random() * 500) + 100,
@@ -288,6 +294,7 @@ export default function BatchProcessingPage() {
   }, [batchFiles, batchSettings.maxConcurrent, toast]);
 
   const stopBatchProcessing = useCallback(() => {
+    abortRef.current = true;
     setIsProcessing(false);
     toast({
       title: "Processing stopped",
@@ -351,14 +358,18 @@ export default function BatchProcessingPage() {
     });
   }, [batchFiles, toast]);
 
-  const filteredFiles = batchFiles.filter((file) => {
-    const matchesSearch = file.name
-      .toLowerCase()
-      .includes(searchQuery.toLowerCase());
-    const matchesFilter =
-      filterStatus === "all" || file.status === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
+  const filteredFiles = useMemo(
+    () =>
+      batchFiles.filter((file) => {
+        const matchesSearch = file.name
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
+        const matchesFilter =
+          filterStatus === "all" || file.status === filterStatus;
+        return matchesSearch && matchesFilter;
+      }),
+    [batchFiles, searchQuery, filterStatus]
+  );
 
   const stats = {
     total: batchFiles.length,
