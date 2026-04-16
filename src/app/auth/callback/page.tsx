@@ -18,11 +18,11 @@ export default function AuthCallbackPage() {
 
     // Listen for the auth state change (handling the code exchange)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
+      if (event === 'PASSWORD_RECOVERY') {
+        // User clicked a password reset link — send them to the update-password form
+        router.push('/auth/update-password');
+      } else if (event === 'SIGNED_IN' && session) {
         router.push('/dashboard');
-      } else if (event === 'SIGNED_OUT') {
-        // Optional: Handle explicit sign out or failure case if needed
-        // but typically we just wait for the signed_in event on this page
       }
     });
 
