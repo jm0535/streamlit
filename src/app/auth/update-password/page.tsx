@@ -27,59 +27,24 @@ export default function UpdatePasswordPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [sessionReady, setSessionReady] = useState(false);
 
-  // Enable the form once we confirm a valid recovery session exists.
-  // We use three complementary checks so timing differences across devices/
-  // Supabase versions can't leave the button permanently disabled:
-  //   1. getSession() immediately — in Supabase v2 this awaits internal init,
-  //      so it returns the recovery session once the hash has been parsed.
-  //   2. onAuthStateChange — catches PASSWORD_RECOVERY or INITIAL_SESSION with
-  //      a session if getSession() somehow resolves before the hash is processed.
-  //   3. 3-second timeout fallback — last resort redirect if there's no session.
+  // If after 3 seconds there is still no session at all, the link is expired.
+  // The button is always enabled — if the session is missing, updateUser will
+  // return an error that gets surfaced in the toast. No need to gate the button.
   useEffect(() => {
-    let done = false;
-
-    const enable = () => {
-      if (done) return;
-      done = true;
-      setSessionReady(true);
-    };
-
-    const redirectAway = () => {
-      if (done) return;
-      done = true;
-      toast({
-        title: 'Invalid or expired link',
-        description: 'Please request a new password reset link.',
-        variant: 'destructive',
-      });
-      router.push('/auth/reset-password');
-    };
-
-    // Check 1: immediate session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) enable();
-    });
-
-    // Check 2: auth state events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || (event === 'INITIAL_SESSION' && session)) {
-        enable();
-      }
-    });
-
-    // Check 3: timeout redirect if no session found after 3 seconds
     const timer = setTimeout(async () => {
-      if (done) return;
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) enable(); else redirectAway();
+      if (!session) {
+        toast({
+          title: 'Invalid or expired link',
+          description: 'Please request a new password reset link.',
+          variant: 'destructive',
+        });
+        router.push('/auth/reset-password');
+      }
     }, 3000);
 
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
   }, [router, toast]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
@@ -206,7 +171,7 @@ export default function UpdatePasswordPage() {
                 <Button
                   type="submit"
                   className="w-full bg-purple-600 hover:bg-purple-700"
-                  disabled={isSubmitting || !sessionReady}
+                  disabled={isSubmitting}
                 >
                   {isSubmitting ? (
                     <>
