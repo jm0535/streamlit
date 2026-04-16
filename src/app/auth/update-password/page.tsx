@@ -36,9 +36,15 @@ export default function UpdatePasswordPage() {
   useEffect(() => {
     let done = false;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (done) return;
-      if (event === 'PASSWORD_RECOVERY') {
+      // PASSWORD_RECOVERY  — fired during initialization if the listener was registered
+      //                      before Supabase finished processing the URL hash.
+      // INITIAL_SESSION     — fired immediately when the listener is registered; if
+      //                      Supabase already processed the recovery token (the common
+      //                      case since init completes before useEffect runs), the session
+      //                      is non-null here and we can enable the form right away.
+      if (event === 'PASSWORD_RECOVERY' || (event === 'INITIAL_SESSION' && session)) {
         done = true;
         setSessionReady(true);
       }
