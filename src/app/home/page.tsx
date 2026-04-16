@@ -83,6 +83,16 @@ export default function LandingPage() {
   const { user } = useAuth();
 
   useEffect(() => {
+    // If Supabase redirected a password-reset link to this page (old emails used
+    // the site URL as the redirect target), forward the user immediately so that
+    // the recovery token in the hash gets processed on the correct page.
+    const hash = window.location.hash;
+    if (hash.includes('type=recovery') || hash.includes('type%3Drecovery')) {
+      // Use a full page navigation so the Supabase client re-processes the hash
+      // on the destination page (client-side router.push does not re-run hash detection).
+      window.location.href = '/auth/update-password' + hash;
+      return;
+    }
     setIsLoaded(true);
   }, []);
 

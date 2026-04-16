@@ -29,14 +29,31 @@ export default function UpdatePasswordPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
 
-  // Supabase sets a recovery session before landing on this page.
-  // Wait for it to be established before allowing the form to submit.
+  // Wait for Supabase to fire the PASSWORD_RECOVERY event, which happens after it
+  // processes the access_token in the URL hash. Using onAuthStateChange (not
+  // getSession) avoids a race condition where getSession() runs before Supabase
+  // has had a chance to parse the hash fragment.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let done = false;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (done) return;
+      if (event === 'PASSWORD_RECOVERY') {
+        done = true;
+        setSessionReady(true);
+      }
+    });
+
+    // Fallback: if PASSWORD_RECOVERY hasn't fired within 3 seconds, check for
+    // an existing session (covers edge cases where the event was emitted before
+    // this listener was registered).
+    const timer = setTimeout(async () => {
+      if (done) return;
+      done = true;
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setSessionReady(true);
       } else {
-        // No session means the link was invalid or already used
         toast({
           title: 'Invalid or expired link',
           description: 'Please request a new password reset link.',
@@ -44,7 +61,12 @@ export default function UpdatePasswordPage() {
         });
         router.push('/auth/reset-password');
       }
-    });
+    }, 3000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timer);
+    };
   }, [router, toast]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
