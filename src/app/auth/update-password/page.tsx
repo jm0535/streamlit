@@ -29,44 +29,51 @@ export default function UpdatePasswordPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
 
-  // Wait for Supabase to fire the PASSWORD_RECOVERY event, which happens after it
-  // processes the access_token in the URL hash. Using onAuthStateChange (not
-  // getSession) avoids a race condition where getSession() runs before Supabase
-  // has had a chance to parse the hash fragment.
+  // Enable the form once we confirm a valid recovery session exists.
+  // We use three complementary checks so timing differences across devices/
+  // Supabase versions can't leave the button permanently disabled:
+  //   1. getSession() immediately — in Supabase v2 this awaits internal init,
+  //      so it returns the recovery session once the hash has been parsed.
+  //   2. onAuthStateChange — catches PASSWORD_RECOVERY or INITIAL_SESSION with
+  //      a session if getSession() somehow resolves before the hash is processed.
+  //   3. 3-second timeout fallback — last resort redirect if there's no session.
   useEffect(() => {
     let done = false;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const enable = () => {
       if (done) return;
-      // PASSWORD_RECOVERY  — fired during initialization if the listener was registered
-      //                      before Supabase finished processing the URL hash.
-      // INITIAL_SESSION     — fired immediately when the listener is registered; if
-      //                      Supabase already processed the recovery token (the common
-      //                      case since init completes before useEffect runs), the session
-      //                      is non-null here and we can enable the form right away.
+      done = true;
+      setSessionReady(true);
+    };
+
+    const redirectAway = () => {
+      if (done) return;
+      done = true;
+      toast({
+        title: 'Invalid or expired link',
+        description: 'Please request a new password reset link.',
+        variant: 'destructive',
+      });
+      router.push('/auth/reset-password');
+    };
+
+    // Check 1: immediate session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) enable();
+    });
+
+    // Check 2: auth state events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY' || (event === 'INITIAL_SESSION' && session)) {
-        done = true;
-        setSessionReady(true);
+        enable();
       }
     });
 
-    // Fallback: if PASSWORD_RECOVERY hasn't fired within 3 seconds, check for
-    // an existing session (covers edge cases where the event was emitted before
-    // this listener was registered).
+    // Check 3: timeout redirect if no session found after 3 seconds
     const timer = setTimeout(async () => {
       if (done) return;
-      done = true;
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setSessionReady(true);
-      } else {
-        toast({
-          title: 'Invalid or expired link',
-          description: 'Please request a new password reset link.',
-          variant: 'destructive',
-        });
-        router.push('/auth/reset-password');
-      }
+      if (session) enable(); else redirectAway();
     }, 3000);
 
     return () => {
