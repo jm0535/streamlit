@@ -71,6 +71,11 @@ export default function UpdatePasswordPage() {
     setIsSubmitting(true);
 
     try {
+      // Ensure the recovery session is active before updating.
+      // This resolves Supabase's internal lock and prevents AbortErrors
+      // caused by concurrent session operations.
+      await supabase.auth.getSession();
+
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 

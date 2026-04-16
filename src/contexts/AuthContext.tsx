@@ -58,13 +58,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!isMounted) return;
 
         try {
-          // Password reset link clicked — redirect to the update-password form
-          // regardless of which page Supabase landed on
-          if (event === 'PASSWORD_RECOVERY') {
-            router.push('/auth/update-password');
-            return;
-          }
-
           setSession(session);
 
           if (session?.user) {
