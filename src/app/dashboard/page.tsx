@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useFileStore } from '@/lib/file-store';
-import { useAuth } from '@/contexts/AuthContext';
 import {
   Mic,
   FileAudio,
@@ -34,7 +33,6 @@ import { preloadAudioAssets } from '@/lib/audio-playback';
 export default function Dashboard() {
   const { toast } = useToast();
   const router = useRouter();
-  const { user, loading } = useAuth();
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isNavigating, setIsNavigating] = useState(false);
 
@@ -45,21 +43,6 @@ export default function Dashboard() {
     // Preload audio assets for instant playback experience later
     preloadAudioAssets();
   }, []);
-
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/auth/login');
-    }
-  }, [user, loading, router]);
-
-  // Use a loading state while checking auth
-  if (loading || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   // Simulated recent files (in real app, would come from IndexedDB or local storage)
   const recentFiles = [

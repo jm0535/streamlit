@@ -8,7 +8,6 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   // Pages that should render without the app sidebar/layout
   const isFullScreenPage = pathname === '/' ||
-                           pathname?.startsWith('/auth') || // covers /auth/login, /auth/callback, /auth/update-password, etc.
                            pathname === '/home' ||
                            pathname === '/privacy' ||
                            pathname === '/terms';

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -80,19 +79,8 @@ const stats = [
 
 export default function LandingPage() {
   const [isLoaded, setIsLoaded] = useState(false);
-  const { user } = useAuth();
 
   useEffect(() => {
-    // If Supabase redirected a password-reset link to this page (old emails used
-    // the site URL as the redirect target), forward the user immediately so that
-    // the recovery token in the hash gets processed on the correct page.
-    const hash = window.location.hash;
-    if (hash.includes('type=recovery') || hash.includes('type%3Drecovery')) {
-      // Use a full page navigation so the Supabase client re-processes the hash
-      // on the destination page (client-side router.push does not re-run hash detection).
-      window.location.href = '/auth/update-password' + hash;
-      return;
-    }
     setIsLoaded(true);
   }, []);
 
@@ -122,28 +110,12 @@ export default function LandingPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {user ? (
-            <Link href="/dashboard">
-              <Button className="bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90 border-0">
-                Go to Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          ) : (
-            <>
-              <Link href="/auth/login">
-                <Button variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10">
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/auth/signup">
-                <Button className="bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90 border-0">
-                  Get Started
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </>
-          )}
+          <Link href="/dashboard">
+            <Button className="bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90 border-0">
+              Go to Dashboard
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       </nav>
 
@@ -177,16 +149,10 @@ export default function LandingPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-              <Link href="/auth/signup">
+              <Link href="/dashboard">
                 <Button size="lg" className="px-8 py-6 text-lg bg-gradient-to-r from-violet-500 to-pink-500 hover:opacity-90 border-0 shadow-2xl shadow-violet-500/25">
                   <Play className="mr-2 h-5 w-5" />
                   Start Researching
-                </Button>
-              </Link>
-              <Link href="/dashboard">
-                <Button size="lg" variant="outline" className="px-8 py-6 text-lg border-white/20 text-white hover:bg-white/10 backdrop-blur-sm">
-                  <Globe className="mr-2 h-5 w-5" />
-                  Try Live Demo
                 </Button>
               </Link>
             </div>
@@ -431,9 +397,9 @@ export default function LandingPage() {
             Free during beta.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="/auth/signup">
+          <Link href="/dashboard">
             <Button size="lg" className="px-10 py-7 text-lg bg-white text-black hover:bg-white/90 border-0 shadow-xl">
-              Create Free Account
+              Start Researching
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>

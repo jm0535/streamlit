@@ -7,7 +7,6 @@ import "../styles/forms.css";
 import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ClientLayout } from "@/components/client-layout";
-import { AuthProvider } from "@/contexts/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -51,12 +50,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
-            <ClientLayout>
-              {children}
-            </ClientLayout>
-            <Toaster />
-          </AuthProvider>
+          <ClientLayout>
+            {children}
+          </ClientLayout>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
