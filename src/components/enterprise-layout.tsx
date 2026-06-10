@@ -52,7 +52,7 @@ interface SidebarSection {
   items: SidebarItem[];
 }
 
-// Simplified, research-focused navigation
+// Research-focused navigation organized by workflow
 const sidebarSections: SidebarSection[] = [
   {
     title: "Workflow",
@@ -61,7 +61,7 @@ const sidebarSections: SidebarSection[] = [
         title: "Dashboard",
         href: "/dashboard",
         icon: Home,
-        description: "Overview and quick upload",
+        description: "Upload and start your workflow",
       },
       {
         title: "Stem Separation",
@@ -73,30 +73,19 @@ const sidebarSections: SidebarSection[] = [
         title: "Transcription",
         href: "/transcription",
         icon: Mic,
-        description: "Analyze audio and extract notes",
-      },
-      {
-        title: "Notes",
-        href: "/notes",
-        icon: Piano,
-        description: "View and edit musical notes",
-      },
-    ],
-  },
-  {
-    title: "Processing",
-    items: [
-      {
-        title: "Batch Processing",
-        href: "/batch-processing",
-        icon: Package,
-        description: "Process multiple files at once",
+        description: "Convert audio to MIDI and notation",
       },
       {
         title: "Audio Analysis",
         href: "/audio-analysis",
         icon: BarChart3,
-        description: "Detailed frequency analysis",
+        description: "Frequency, pitch, and spectral analysis",
+      },
+      {
+        title: "Export",
+        href: "/export",
+        icon: Download,
+        description: "Download MIDI, stems, and data",
       },
     ],
   },
@@ -124,19 +113,25 @@ const sidebarSections: SidebarSection[] = [
     ],
   },
   {
-    title: "Output",
+    title: "Tools",
     items: [
-      {
-        title: "Export",
-        href: "/export",
-        icon: Download,
-        description: "Export to MIDI, PDF, CSV",
-      },
       {
         title: "Files",
         href: "/files",
         icon: FolderOpen,
         description: "Manage your local files",
+      },
+      {
+        title: "Batch Processing",
+        href: "/batch-processing",
+        icon: Package,
+        description: "Process multiple files at once",
+      },
+      {
+        title: "Notes",
+        href: "/notes",
+        icon: Piano,
+        description: "View and edit musical notes",
       },
     ],
   },

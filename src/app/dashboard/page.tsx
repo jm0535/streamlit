@@ -9,18 +9,15 @@ import {
   Mic,
   FileAudio,
   Download,
-  Piano,
   Headphones,
   Package,
   ArrowRight,
   Shield,
   Clock,
-  Upload,
   PlayCircle,
   FolderOpen,
   Zap,
   Loader2,
-  CheckCircle2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -52,10 +49,10 @@ export default function Dashboard() {
   ];
 
   const quickActions = [
-    { title: 'Stem Separation', description: 'Isolate instruments', icon: Headphones, href: '/stem-separation', color: 'bg-pink-500' },
-    { title: 'Transcription', description: 'Analyze audio files', icon: Mic, href: '/transcription', color: 'bg-blue-500' },
-    { title: 'Notes', description: 'View and edit notes', icon: Piano, href: '/notes', color: 'bg-purple-500' },
-    { title: 'Batch Processing', description: 'Process multiple files', icon: Package, href: '/batch-processing', color: 'bg-orange-500' },
+    { title: 'Stem Separation', description: 'Isolate instruments (drums, bass, vocals, other)', icon: Headphones, href: '/stem-separation', color: 'bg-pink-500' },
+    { title: 'Transcription', description: 'Convert audio to MIDI and musical notation', icon: Mic, href: '/transcription', color: 'bg-blue-500' },
+    { title: 'Audio Analysis', description: 'Frequency, pitch, and spectral analysis', icon: Zap, href: '/audio-analysis', color: 'bg-purple-500' },
+    { title: 'Export', description: 'Download MIDI, stems, and analysis data', icon: Download, href: '/export', color: 'bg-green-500' },
   ];
 
   const handleFilesChange = (files: File[]) => {
@@ -68,7 +65,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleQuickTranscribe = async () => {
+  const handleStartWorkflow = async () => {
     if (uploadedFiles.length > 0) {
       setIsNavigating(true);
 
@@ -85,7 +82,7 @@ export default function Dashboard() {
         description: `Files saved to session`,
       });
 
-      // Navigate to stem separation page (start of workflow)
+      // Step 1 of workflow: Stem Separation
       router.push('/stem-separation');
     } else {
       toast({
@@ -191,7 +188,7 @@ export default function Dashboard() {
               {/* Action Buttons */}
               <div className="flex gap-3">
                 <Button
-                  onClick={handleQuickTranscribe}
+                  onClick={handleStartWorkflow}
                   className="flex-1"
                   disabled={isNavigating}
                 >
@@ -289,20 +286,25 @@ export default function Dashboard() {
       {/* Workflow Guide */}
       <Card className="bg-muted/30">
         <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="flex items-center gap-6">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
+            <div className="flex flex-wrap items-center justify-center gap-4">
               <div className="flex items-center gap-2">
-                <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">1</div>
+                <div className="bg-slate-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">1</div>
                 <span className="text-sm font-medium">Upload</span>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
               <div className="flex items-center gap-2">
-                <div className="bg-purple-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">2</div>
+                <div className="bg-pink-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">2</div>
+                <span className="text-sm font-medium">Separate</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-2">
+                <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">3</div>
                 <span className="text-sm font-medium">Transcribe</span>
               </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground hidden md:block" />
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
               <div className="flex items-center gap-2">
-                <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">3</div>
+                <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-medium">4</div>
                 <span className="text-sm font-medium">Export</span>
               </div>
             </div>
