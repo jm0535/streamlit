@@ -43,14 +43,35 @@ export interface SharedNote {
   confidence: number;
 }
 
+export type FileStatus =
+  | 'uploaded'
+  | 'processing'
+  | 'stems_extracted'
+  | 'transcribed'
+  | 'analyzed'
+  | 'exported'
+  | 'error';
+
 // Audio file metadata for sharing (File objects can't be persisted)
 export interface SharedAudioFile {
+  id: string;
   name: string;
   type: string;
   size: number;
   lastModified: number;
   // Audio data stored as base64 for persistence
   audioDataUrl?: string;
+  // Workflow lifecycle
+  status: FileStatus;
+  progress: number; // 0-100
+  stepTimestamps: {
+    uploaded: number;
+    stemsExtracted?: number;
+    transcribed?: number;
+    analyzed?: number;
+    exported?: number;
+  };
+  error?: string;
 }
 
 interface FileStoreState {
@@ -98,6 +119,23 @@ interface FileStoreState {
   // ===== Transcription results for other pages =====
   hasTranscriptionResults: boolean;
   setHasTranscriptionResults: (has: boolean) => void;
+
+  // ===== File lifecycle updates =====
+  updateFileStatus: (id: string, status: FileStatus, progress?: number) => void;
+  updateFileStep: (id: string, step: 'stemsExtracted' | 'transcribed' | 'analyzed' | 'exported') => void;
+  setFileError: (id: string, error: string) => void;
+  removeFile: (id: string) => void;
+
+  // ===== Stats =====
+  fileStats: {
+    total: number;
+    uploaded: number;
+    stemsExtracted: number;
+    transcribed: number;
+    analyzed: number;
+    exported: number;
+    error: number;
+  };
 }
 
 export const useFileStore = create<FileStoreState>()(
@@ -216,6 +254,67 @@ export const useFileStore = create<FileStoreState>()(
       // ===== Transcription results tracking =====
       hasTranscriptionResults: false,
       setHasTranscriptionResults: (has) => set({ hasTranscriptionResults: has }),
+
+      // ===== File lifecycle tracking =====
+      updateFileStatus: (id, status, progress) => set((state) => ({
+        sharedAudioFiles: state.sharedAudioFiles.map((f) =>
+          f.id === id
+            ? { ...f, status, progress: progress ?? f.progress }
+            : f
+        ),
+      })),
+
+      updateFileStep: (id, step) => set((state) => ({
+        sharedAudioFiles: state.sharedAudioFiles.map((f) =>
+          f.id === id
+            ? {
+                ...f,
+                status: step === 'stemsExtracted'
+                  ? 'stems_extracted'
+                  : step === 'transcribed'
+                    ? 'transcribed'
+                    : step === 'analyzed'
+                      ? 'analyzed'
+                      : 'exported',
+                progress: 0,
+                stepTimestamps: {
+                  ...f.stepTimestamps,
+                  [step === 'stemsExtracted'
+                    ? 'stemsExtracted'
+                    : step === 'transcribed'
+                      ? 'transcribed'
+                      : step === 'analyzed'
+                        ? 'analyzed'
+                        : 'exported']: Date.now(),
+                },
+              }
+            : f
+        ),
+      })),
+
+      setFileError: (id, error) => set((state) => ({
+        sharedAudioFiles: state.sharedAudioFiles.map((f) =>
+          f.id === id ? { ...f, status: 'error', error } : f
+        ),
+      })),
+
+      removeFile: (id) => set((state) => ({
+        sharedAudioFiles: state.sharedAudioFiles.filter((f) => f.id !== id),
+      })),
+
+      // ===== Stats (computed from sharedAudioFiles) =====
+      get fileStats() {
+        const files = get().sharedAudioFiles;
+        return {
+          total: files.length,
+          uploaded: files.filter((f) => f.status === 'uploaded').length,
+          stemsExtracted: files.filter((f) => f.status === 'stems_extracted').length,
+          transcribed: files.filter((f) => f.status === 'transcribed').length,
+          analyzed: files.filter((f) => f.status === 'analyzed').length,
+          exported: files.filter((f) => f.status === 'exported').length,
+          error: files.filter((f) => f.status === 'error').length,
+        };
+      },
     }),
     {
       name: 'file-store',
@@ -241,11 +340,15 @@ export async function fileToSharedAudioFile(file: File): Promise<SharedAudioFile
     const reader = new FileReader();
     reader.onload = () => {
       resolve({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         name: file.name,
         type: file.type,
         size: file.size,
         lastModified: file.lastModified,
         audioDataUrl: reader.result as string,
+        status: 'uploaded',
+        progress: 0,
+        stepTimestamps: { uploaded: Date.now() },
       });
     };
     reader.onerror = reject;
