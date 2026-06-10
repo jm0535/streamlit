@@ -106,13 +106,10 @@ const getIconForInstrument = (inst: string) => {
 };
 
 // Helper to decode blob
-const blobToAudioBuffer = async (blob: Blob): Promise<AudioBuffer> => {
-  const arrayBuffer = await blob.arrayBuffer();
-  // Use a temporary context for decoding
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-  const buffer = await audioContext.decodeAudioData(arrayBuffer);
-  audioContext.close(); // Clean up
-  return buffer;
+const blobToAudioBuffer = async (blob: Blob | undefined): Promise<AudioBuffer | null> => {
+  if (!blob) return null;
+  const { decodeBlob } = await import('@/services/audio-engine');
+  return decodeBlob(blob);
 };
 
 export default function StemSeparationPage() {

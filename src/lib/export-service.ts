@@ -267,12 +267,13 @@ export async function exportStems(
 
   for (let i = 0; i < separation.stems.length; i++) {
     const stem = separation.stems[i];
+    const stemName = stem.name || stem.instrument || `stem_${i}`;
     const progress = 20 + Math.floor((i / separation.stems.length) * 70);
-    onProgress?.(progress, `Exporting ${stem.name}...`);
+    onProgress?.(progress, `Exporting ${stemName}...`);
 
     if (stem.blob) {
       files.push({
-        filename: `${baseName}_${stem.name.toLowerCase()}.wav`,
+        filename: `${baseName}_${stemName.toLowerCase()}.wav`,
         data: stem.blob,
         type: 'audio/wav',
       });
@@ -330,11 +331,12 @@ export async function exportAllStems(
     const progress = 10 + Math.floor((i / results.length) * 80);
 
     for (const stem of separation.stems) {
-      onProgress?.(progress, `Exporting ${separation.fileName} - ${stem.name}...`);
+      const stemName = stem.name || stem.instrument || 'stem';
+      onProgress?.(progress, `Exporting ${separation.fileName} - ${stemName}...`);
 
       if (stem.blob) {
         files.push({
-          filename: `${baseName}/${stem.name.toLowerCase()}.wav`,
+          filename: `${baseName}/${stemName.toLowerCase()}.wav`,
           data: stem.blob,
           type: 'audio/wav',
         });
@@ -404,9 +406,10 @@ export async function exportBatch(
       const baseName = separation.fileName.replace(/\.[^.]+$/, '');
 
       for (const stem of separation.stems) {
+        const stemName = stem.name || stem.instrument || 'stem';
         if (stem.blob) {
           files.push({
-            filename: `stems/${baseName}/${stem.name.toLowerCase()}.wav`,
+            filename: `stems/${baseName}/${stemName.toLowerCase()}.wav`,
             data: stem.blob,
             type: 'audio/wav',
           });
