@@ -31,20 +31,13 @@ export type QualityMode = 'fast' | 'balanced' | 'quality';
 /**
  * Convert Float32Array stereo to AudioBuffer
  */
-function floatArrayToAudioBuffer(
+async function floatArrayToAudioBuffer(
   left: Float32Array,
   right: Float32Array,
   sampleRate: number
-): AudioBuffer {
-  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-  const length = left.length;
-
-  const buffer = audioContext.createBuffer(2, length, sampleRate);
-  buffer.copyToChannel(new Float32Array(left), 0);
-  buffer.copyToChannel(new Float32Array(right), 1);
-
-  audioContext.close();
-  return buffer;
+): Promise<AudioBuffer> {
+  const { createStereoBuffer } = await import('@/services/audio-engine');
+  return createStereoBuffer(left, right, sampleRate);
 }
 
 // Worker instance
@@ -78,7 +71,7 @@ export async function separateAudioWithDemucs(
 
   return new Promise((resolve, reject) => {
     // Handle messages from worker
-    worker.onmessage = (e) => {
+    worker.onmessage = async (e) => {
       const msg = e.data;
 
       if (msg.type === 'progress') {
@@ -99,10 +92,10 @@ export async function separateAudioWithDemucs(
         const outputSampleRate = 44100;
 
         const result: StemSeparationResult = {
-          drums: floatArrayToAudioBuffer(drums.left, drums.right, outputSampleRate),
-          bass: floatArrayToAudioBuffer(bass.left, bass.right, outputSampleRate),
-          vocals: floatArrayToAudioBuffer(vocals.left, vocals.right, outputSampleRate),
-          other: floatArrayToAudioBuffer(other.left, other.right, outputSampleRate),
+          drums: await floatArrayToAudioBuffer(drums.left, drums.right, outputSampleRate),
+          bass: await floatArrayToAudioBuffer(bass.left, bass.right, outputSampleRate),
+          vocals: await floatArrayToAudioBuffer(vocals.left, vocals.right, outputSampleRate),
+          other: await floatArrayToAudioBuffer(other.left, other.right, outputSampleRate),
         };
 
         resolve(result);

@@ -70,8 +70,17 @@ const initProcessor = async (qualityMode: 'fast' | 'balanced' | 'quality') => {
 
   if (!isModelLoaded) {
     postProgress('initializing', 35, 'Initializing ML model (this may take a moment)...');
-    await processorInstance.loadModel(MODEL_URL);
-    isModelLoaded = true;
+    try {
+      await processorInstance.loadModel(MODEL_URL);
+      isModelLoaded = true;
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      throw new Error(
+        `Failed to download Demucs model from HuggingFace. ` +
+        `This usually means a network issue or the 172MB model timed out. ` +
+        `Original error: ${errorMsg}`
+      );
+    }
   }
 };
 
