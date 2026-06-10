@@ -310,8 +310,14 @@ export function disposeAudio(): void {
 
 /**
  * Preload high-quality assets in the background
+ * Safe to call on mount — skips if AudioContext hasn't been started by user gesture
  */
 export function preloadAudioAssets(): void {
+  // Chrome requires a user gesture before AudioContext can start.
+  // If the context is suspended (default on page load), skip preloading.
+  if (Tone.context.state !== 'running') {
+    return;
+  }
   // Start loading piano samples if not already loaded
   if (!pianoSampler && !isLoading) {
     console.log('Preloading audio assets...');
