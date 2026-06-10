@@ -1,5 +1,7 @@
 'use client';
 
+import { createStereoBuffer } from '@/services/audio-engine';
+
 /**
  * Demucs Service - ML-based Audio Source Separation
  * Uses demucs-web (ONNX Runtime Web) for real stem separation
@@ -31,12 +33,11 @@ export type QualityMode = 'fast' | 'balanced' | 'quality';
 /**
  * Convert Float32Array stereo to AudioBuffer
  */
-async function floatArrayToAudioBuffer(
+function floatArrayToAudioBuffer(
   left: Float32Array,
   right: Float32Array,
   sampleRate: number
-): Promise<AudioBuffer> {
-  const { createStereoBuffer } = await import('@/services/audio-engine');
+): AudioBuffer {
   return createStereoBuffer(left, right, sampleRate);
 }
 
@@ -52,6 +53,17 @@ function getWorker(): Worker {
     demucsWorker = new Worker(new URL('./demucs.worker.ts', import.meta.url));
   }
   return demucsWorker;
+}
+
+/**
+ * Terminate and clear the worker singleton.
+ * Call this after any error so the next call creates a fresh worker.
+ */
+function resetWorker(): void {
+  if (demucsWorker) {
+    demucsWorker.terminate();
+    demucsWorker = null;
+  }
 }
 
 /**
@@ -71,7 +83,7 @@ export async function separateAudioWithDemucs(
 
   return new Promise((resolve, reject) => {
     // Handle messages from worker
-    worker.onmessage = async (e) => {
+    worker.onmessage = (e) => {
       const msg = e.data;
 
       if (msg.type === 'progress') {
@@ -87,25 +99,32 @@ export async function separateAudioWithDemucs(
           message: 'Separation complete!'
         });
 
-        // Convert raw Float32Arrays back to AudioBuffers
-        const { drums, bass, vocals, other } = msg.result;
-        const outputSampleRate = 44100;
+        try {
+          // Convert raw Float32Arrays back to AudioBuffers
+          const { drums, bass, vocals, other } = msg.result;
+          const outputSampleRate = 44100;
 
-        const result: StemSeparationResult = {
-          drums: await floatArrayToAudioBuffer(drums.left, drums.right, outputSampleRate),
-          bass: await floatArrayToAudioBuffer(bass.left, bass.right, outputSampleRate),
-          vocals: await floatArrayToAudioBuffer(vocals.left, vocals.right, outputSampleRate),
-          other: await floatArrayToAudioBuffer(other.left, other.right, outputSampleRate),
-        };
+          const result: StemSeparationResult = {
+            drums: floatArrayToAudioBuffer(drums.left, drums.right, outputSampleRate),
+            bass: floatArrayToAudioBuffer(bass.left, bass.right, outputSampleRate),
+            vocals: floatArrayToAudioBuffer(vocals.left, vocals.right, outputSampleRate),
+            other: floatArrayToAudioBuffer(other.left, other.right, outputSampleRate),
+          };
 
-        resolve(result);
+          resolve(result);
+        } catch (conversionErr) {
+          resetWorker();
+          reject(conversionErr instanceof Error ? conversionErr : new Error(String(conversionErr)));
+        }
       } else if (msg.type === 'error') {
+        resetWorker();
         reject(new Error(msg.message));
       }
     };
 
-    worker.onerror = () => {
-      reject(new Error('Web Worker error occurred'));
+    worker.onerror = (err) => {
+      resetWorker();
+      reject(new Error(err.message || 'Web Worker error occurred'));
     };
 
     // Prepare data for transfer
