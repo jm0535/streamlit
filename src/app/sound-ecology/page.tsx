@@ -54,9 +54,8 @@ export default function SoundEcologyPage() {
     try {
       const file = files[0];
       // Decode audio file
-      const arrayBuffer = await file.arrayBuffer();
-      const audioContext = new AudioContext();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      const { decodeAudioFile } = await import('@/services/audio-engine');
+      const audioBuffer = await decodeAudioFile(file);
 
       // Run analysis
       const analysisResult = await analyzeSoundscape(audioBuffer, {
@@ -75,8 +74,6 @@ export default function SoundEcologyPage() {
         title: 'Analysis complete',
         description: `NDSI: ${analysisResult.indices.ndsi.toFixed(2)} (${ndsiInterpretation})`,
       });
-
-      audioContext.close();
     } catch (error) {
       console.error('Analysis failed:', error);
       toast({

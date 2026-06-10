@@ -52,9 +52,8 @@ export default function LinguisticsPage() {
 
     try {
       const file = files[0];
-      const arrayBuffer = await file.arrayBuffer();
-      const audioContext = new AudioContext();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      const { decodeAudioFile } = await import('@/services/audio-engine');
+      const audioBuffer = await decodeAudioFile(file);
 
       const analysisResult = await analyzeLinguistics(audioBuffer, {
         onProgress: setProgress,
@@ -66,8 +65,6 @@ export default function LinguisticsPage() {
         title: 'Analysis complete',
         description: `Speech rate: ${analysisResult.rhythm.speechRate.toFixed(1)} syl/sec`,
       });
-
-      audioContext.close();
     } catch (error) {
       console.error('Analysis failed:', error);
       toast({

@@ -51,9 +51,8 @@ export default function EthnomusicologyPage() {
     try {
       const file = files[0];
       // Decode audio file
-      const arrayBuffer = await file.arrayBuffer();
-      const audioContext = new AudioContext();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      const { decodeAudioFile } = await import('@/services/audio-engine');
+      const audioBuffer = await decodeAudioFile(file);
 
       // Run analysis
       const analysisResult = await analyzeMicrotonal(audioBuffer, {
@@ -66,8 +65,6 @@ export default function EthnomusicologyPage() {
         title: 'Analysis complete',
         description: `Found ${analysisResult.totalNotes} pitch events with ${analysisResult.microtonalContent.toFixed(1)}% microtonal content`,
       });
-
-      audioContext.close();
     } catch (error) {
       console.error('Analysis failed:', error);
       toast({
